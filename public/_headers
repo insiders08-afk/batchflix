@@ -1,0 +1,21 @@
+# Versioned JS/CSS chunks — content-hashed filenames, safe to cache forever
+/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+# PWA icons & manifest
+/icons/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service worker — must never be cached so updates propagate immediately
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# HTML entry point — short cache so updates are picked up quickly
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
