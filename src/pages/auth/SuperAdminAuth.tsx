@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Zap, ShieldCheck, Loader2, MapPin, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Zap, ShieldCheck, Loader2, MapPin, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import InstallButton from "@/components/InstallButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -16,9 +16,29 @@ export default function SuperAdminAuth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [screen, setScreen] = useState<"login" | "forgot">("login");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      toast({ title: "Reset link sent!", description: "Check your email for the password reset link." });
+    } catch (err: unknown) {
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to send reset link", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +52,6 @@ export default function SuperAdminAuth() {
 
       const userId = data.user?.id;
 
-      // Check for super_admin role
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role, city")
@@ -96,53 +115,94 @@ export default function SuperAdminAuth() {
             </div>
 
             <Card className="p-6 shadow-card border-border/50">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="superadmin@batchhub.app"
-                    required
-                    value={form.email}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Your password"
-                      required
-                      value={form.password}
-                      onChange={handleChange}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+              {screen === "forgot" ? (
+                resetSent ? (
+                  <div className="text-center py-4 space-y-3">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                      <CheckCircle2 className="w-8 h-8 text-primary" />
+                    </div>
+                    <p className="font-semibold">Reset Link Sent!</p>
+                    <p className="text-sm text-muted-foreground">Check your email for the password reset link.</p>
+                    <Button variant="outline" size="sm" onClick={() => { setScreen("login"); setResetSent(false); setForgotEmail(""); }}>
+                      Back to Login
+                    </Button>
                   </div>
-                </div>
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full gradient-hero text-white border-0 hover:opacity-90 h-11 font-semibold"
-                >
-                  {loading ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</>
-                  ) : (
-                    "Access Control Panel"
-                  )}
-                </Button>
-              </form>
+                ) : (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <p className="text-sm text-muted-foreground">Enter your registered email and we'll send a reset link.</p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="forgotEmail">Email</Label>
+                      <Input
+                        id="forgotEmail"
+                        type="email"
+                        required
+                        value={forgotEmail}
+                        onChange={e => setForgotEmail(e.target.value)}
+                        placeholder="superadmin@batchhub.app"
+                      />
+                    </div>
+                    <Button type="submit" disabled={loading} className="w-full gradient-hero text-white border-0 hover:opacity-90 h-11 font-semibold">
+                      {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</> : "Send Reset Link"}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setScreen("login")}>
+                      Back to Login
+                    </Button>
+                  </form>
+                )
+              ) : (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="superadmin@batchhub.app"
+                      required
+                      value={form.email}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <button type="button" className="text-xs text-primary hover:underline" onClick={() => setScreen("forgot")}>
+                        Forgot password?
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Your password"
+                        required
+                        value={form.password}
+                        onChange={handleChange}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full gradient-hero text-white border-0 hover:opacity-90 h-11 font-semibold"
+                  >
+                    {loading ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</>
+                    ) : (
+                      "Access Control Panel"
+                    )}
+                  </Button>
+                </form>
+              )}
             </Card>
 
             <p className="text-center text-xs text-muted-foreground mt-4">
