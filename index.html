@@ -2,30 +2,72 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Batchflix - Coaching Management App</title>
-    <meta name="description" content="..">
-    <meta name="author" content="Lovable" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>BatchHub — Coaching Institute Manager</title>
+    <meta name="description" content="Manage coaching institute batches, attendance, fees, tests and announcements.">
+    <meta name="author" content="BatchHub" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    
-    
+    <!-- Fonts: preconnect only — stylesheet loaded asynchronously via JS to avoid render-blocking -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Async font load: inserted after page paint to keep FCP clean -->
+    <script>
+      (function(){
+        var l=document.createElement('link');
+        l.rel='stylesheet';
+        l.href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700;800&display=swap';
+        document.head.appendChild(l);
+      })();
+    </script>
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700;800&display=swap" /></noscript>
+
+    <!-- PWA Theme -->
+    <meta name="theme-color" content="#3b4fcf" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Apple / iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="BatchHub" />
+    <link rel="apple-touch-icon" href="/icons/pwa-192x192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/pwa-192x192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/pwa-512x512.png" />
+
+    <!-- Apple splash screens (common sizes) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- OG / Social -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/19fc46ed-d15f-4e20-a172-8137caca0317/id-preview-868c43ba--84e7a891-3ecd-4b23-b253-5e7066fed2f7.lovable.app-1774343902598.png">
+    <meta property="og:title" content="BatchHub — Coaching Institute Manager" />
+    <meta property="og:description" content="Manage coaching institute batches, attendance, fees, tests and announcements." />
+    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/606249ea-93c3-4aea-810f-e9bbafdceead/id-preview-f137b3c1--c74c7e2e-7ea7-49a0-a5ba-ad67ad992c05.lovable.app-1773025915834.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/19fc46ed-d15f-4e20-a172-8137caca0317/id-preview-868c43ba--84e7a891-3ecd-4b23-b253-5e7066fed2f7.lovable.app-1774343902598.png">
-    <meta property="og:title" content="Batchflix - Coaching Management App">
-  <meta name="twitter:title" content="Batchflix - Coaching Management App">
-  <meta property="og:description" content="..">
-  <meta name="twitter:description" content="..">
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-</head>
+    <meta name="twitter:title" content="BatchHub — Coaching Institute Manager" />
+    <meta name="twitter:description" content="Manage coaching institute batches, attendance, fees, tests and announcements." />
+    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/606249ea-93c3-4aea-810f-e9bbafdceead/id-preview-f137b3c1--c74c7e2e-7ea7-49a0-a5ba-ad67ad992c05.lovable.app-1773025915834.png" />
+  </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Inline critical skeleton — painted immediately, replaced by React on hydration -->
+      <style>
+        #root-splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f5f6fa;z-index:9999;flex-direction:column;gap:12px}
+        .splash-logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#3b4fcf,#6c7ff2);display:flex;align-items:center;justify-content:center}
+        .splash-logo svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+        .splash-title{font-family:system-ui,sans-serif;font-size:22px;font-weight:700;color:#1a1d2e;letter-spacing:-0.3px}
+        .splash-bar{width:160px;height:4px;border-radius:4px;background:#e2e5f1;overflow:hidden}
+        .splash-bar-fill{height:100%;width:40%;background:linear-gradient(90deg,#3b4fcf,#6c7ff2);border-radius:4px;animation:splash-slide 1s ease-in-out infinite}
+        @keyframes splash-slide{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+      </style>
+      <div id="root-splash">
+        <div class="splash-logo">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <span class="splash-title">BatchHub</span>
+        <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

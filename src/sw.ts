@@ -11,13 +11,14 @@ precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
 // ─── Runtime caching: JS/CSS assets (cache-first, 1 year) ────────────────────
+// Catches any asset not in the precache manifest (e.g. dynamic imports loaded later)
 registerRoute(
   ({ url }) => url.pathname.startsWith("/assets/"),
   new CacheFirst({
     cacheName: "assets-cache-v1",
     plugins: [
       new ExpirationPlugin({
-        maxAgeSeconds: 365 * 24 * 60 * 60,
+        maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
         maxEntries: 100,
       }),
     ],
