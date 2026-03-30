@@ -1,158 +1,173 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-/* Google Fonts are now loaded via <link rel="preload"> in index.html for better LCP performance */
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  BarChart3,
+  Users,
+  BookOpen,
+  ClipboardList,
+  MessageSquare,
+  IndianRupee,
+  TrendingUp,
+  ArrowRight,
+  Zap,
+  Shield,
+  Smartphone,
+  Download,
+  X,
+  Check,
+  UserCheck,
+  Bell,
+  FileText,
+  Settings2,
+  Sparkles,
+  Star,
+  GraduationCap,
+  ChevronRight,
+  ChevronDown,
+  Play,
+  XCircle,
+  CheckCircle2,
+  Clock,
+  Rocket,
+  MousePointerClick,
+} from "lucide-react";
+import InstallButton from "@/components/InstallButton";
+import { supabase } from "@/integrations/supabase/client";
 
-@layer base {
-  :root {
-    /* BatchHub Brand Colors */
-    --primary: 234 74% 55%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 234 74% 92%;
-    --primary-glow: 234 80% 65%;
-
-    --accent: 35 98% 52%;
-    --accent-foreground: 0 0% 100%;
-    --accent-light: 35 98% 92%;
-
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --success-light: 142 71% 92%;
-
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-
-    --danger: 0 84% 60%;
-    --danger-foreground: 0 0% 100%;
-    --danger-light: 0 84% 93%;
-
-    /* Base */
-    --background: 220 20% 98%;
-    --foreground: 224 40% 10%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 224 40% 10%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 40% 10%;
-
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 224 30% 20%;
-
-    --muted: 220 14% 94%;
-    --muted-foreground: 220 12% 38%;
-
-    --border: 220 14% 90%;
-    --input: 220 14% 90%;
-    --ring: 234 74% 55%;
-    --radius: 0.75rem;
-
-    /* Sidebar */
-    --sidebar-background: 224 40% 10%;
-    --sidebar-foreground: 220 20% 85%;
-    --sidebar-primary: 234 74% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 224 30% 18%;
-    --sidebar-accent-foreground: 220 20% 90%;
-    --sidebar-border: 224 30% 16%;
-    --sidebar-ring: 234 74% 55%;
-
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(234 74% 55%), hsl(248 80% 65%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 20% 98%));
-    --gradient-accent: linear-gradient(135deg, hsl(35 98% 52%), hsl(25 100% 60%));
-    --gradient-sidebar: linear-gradient(180deg, hsl(224 40% 10%), hsl(224 35% 8%));
-
-    /* Shadows */
-    --shadow-sm: 0 1px 3px hsl(220 30% 15% / 0.08), 0 1px 2px hsl(220 30% 15% / 0.06);
-    --shadow-md: 0 4px 12px hsl(220 30% 15% / 0.10), 0 2px 6px hsl(220 30% 15% / 0.06);
-    --shadow-lg: 0 10px 30px hsl(220 30% 15% / 0.12), 0 4px 10px hsl(220 30% 15% / 0.08);
-    --shadow-primary: 0 8px 24px hsl(234 74% 55% / 0.25);
-    --shadow-accent: 0 8px 24px hsl(35 98% 52% / 0.25);
-  }
-
-  .dark {
-    --background: 224 40% 6%;
-    --foreground: 220 20% 95%;
-    --card: 224 35% 9%;
-    --card-foreground: 220 20% 95%;
-    --popover: 224 35% 9%;
-    --popover-foreground: 220 20% 95%;
-    --primary: 234 74% 62%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 224 30% 14%;
-    --secondary-foreground: 220 20% 90%;
-    --muted: 224 25% 14%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 35 98% 55%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 224 25% 16%;
-    --input: 224 25% 16%;
-    --ring: 234 74% 62%;
-  }
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => void;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+const roleToPath: Record<string, string> = {
+  admin: "/admin",
+  teacher: "/teacher",
+  student: "/student",
+  parent: "/parent",
+  super_admin: "/superadmin",
+  app_owner: "/owner",
+};
 
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
+const navLinks = [
+  { label: "Features", href: "#features" },
+  { label: "Why Us", href: "#problem-solution" },
+  { label: "Pricing", href: "#pricing" },
+];
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-}
+const oldProblems = [
+  { icon: FileText, title: "Paper Registers", desc: "Easily lost, damaged, or outdated. No backup available." },
+  {
+    icon: MessageSquare,
+    title: "Scattered WhatsApp Groups",
+    desc: "Chaotic communication, missed messages, no structure.",
+  },
+  { icon: BarChart3, title: "Messy Spreadsheets", desc: "Manual errors, version conflicts, no real-time updates." },
+];
 
-@layer utilities {
-  .font-display {
-    font-family: 'Bricolage Grotesque', 'Inter', sans-serif;
-  }
+const batchhubSolutions = [
+  {
+    icon: CheckCircle2,
+    title: "Digital Everything",
+    desc: "Cloud-based records, automatic backups, accessible anywhere.",
+  },
+  { icon: Users, title: "Organized Batch Chat", desc: "Structured communication per batch, announcements, and polls." },
+  { icon: TrendingUp, title: "Real-time Analytics", desc: "Live dashboards, attendance tracking, and fee insights." },
+];
 
-  .gradient-hero {
-    background: var(--gradient-hero);
-  }
+const featureCards = [
+  {
+    icon: Users,
+    title: "Batch Management",
+    desc: "Organize students into intelligent batches with simplicity.",
+    tags: ["Scheduling", "Transfers"],
+    bg: "#0EA5E9",
+  },
+  {
+    icon: CheckCircle2,
+    title: "Digital Attendance",
+    desc: "One-tap attendance with instant notifications to parents.",
+    tags: ["One-Tap", "Alerts"],
+    bg: "#8B6F4E",
+  },
+  {
+    icon: MessageSquare,
+    title: "Batch Chat",
+    desc: "Dedicated chat spaces for each batch with file sharing.",
+    tags: ["File Share", "Structured"],
+    bg: "#E6C2A0",
+  },
+  {
+    icon: BarChart3,
+    title: "Test & Rankings",
+    desc: "Create tests, enter scores, and watch auto-generated leaderboards.",
+    tags: ["Scores", "Rankings"],
+    bg: "#D4C4B0",
+  },
+  {
+    icon: IndianRupee,
+    title: "Fee Tracking",
+    desc: "Automated reminders, digital receipts, and payment analytics.",
+    tags: ["Auto Remind", "Receipts"],
+    bg: "#0EA5E9",
+  },
+  {
+    icon: BookOpen,
+    title: "Homework & DPP",
+    desc: "Digital assignment distribution and practice papers.",
+    tags: ["PDF Upload", "Tracking"],
+    bg: "#8B6F4E",
+  },
+];
 
-  .gradient-accent {
-    background: var(--gradient-accent);
-  }
+const pricingPlans = [
+  {
+    name: "Starter",
+    price: "Free",
+    sub: "First 15 days on us",
+    desc: "Perfect for new or small institutes",
+    features: ["Up to 3 batches", "Up to 60 students", "Attendance + Chat", "Basic fee tracking", "Email support"],
+    cta: "Start Free",
+    highlighted: false,
+    dark: false,
+  },
+  {
+    name: "Growing",
+    price: "₹8",
+    priceSuffix: "/student",
+    sub: "per month · min ₹499",
+    desc: "Most institutes choose this",
+    features: [
+      "Unlimited batches",
+      "Per-student billing",
+      "Full fee management",
+      "Test scores & rankings",
+      "Push notifications",
+      "Priority support",
+    ],
+    cta: "Get Started",
+    highlighted: true,
+    dark: true,
+  },
+];
 
-  .shadow-primary {
-    box-shadow: var(--shadow-primary);
-  }
-
-  .shadow-card {
-    box-shadow: var(--shadow-md);
-  }
-
-  .glass {
-    background: hsl(var(--card) / 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .text-gradient {
-    background: var(--gradient-hero);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .text-gradient-accent {
-    background: var(--gradient-accent);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-}
+const faqs = [
+  {
+    q: "Is BatchHub right for my coaching institute?",
+    a: "If you run a coaching class, tuition centre, or training institute in India with batches of students — yes, BatchHub is built exactly for you. It works for JEE/NEET coaching, foundation classes, language schools, and more.",
+  },
+  {
+    q: "How long does it take to set up?",
+    a: "Under 5 minutes. Sign up, create your institute, add your first batch, and invite students. That's it. No complex configuration or training needed.",
+  },
+  {
+    q: "Do I need any technical experience?",
+    a: "Not at all. BatchHub is designed for institute owners and teachers, not IT teams. If you can use WhatsApp, you can use BatchHub.",
+  },
+  {
+    q: "What if it doesn't work for my use case?",
+    a: "Your first month is completely free with no credit card required. Try it risk-free. If it's not the right fit, you can walk away — no questions asked.",
   },
   {
     q: "Can I cancel anytime?",
