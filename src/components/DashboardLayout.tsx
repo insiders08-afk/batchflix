@@ -25,7 +25,6 @@ const menusByRole: Record<Role, { icon: React.ElementType; label: string; path: 
     { icon: GraduationCap, label: "Students", path: "/admin/students" },
     { icon: ClipboardList, label: "Team", path: "/admin/team" },
     { icon: ShieldCheck, label: "Approvals", path: "/admin/approvals" },
-    { icon: BookMarked, label: "Batch Applications", path: "/admin/batch-applications" },
     { icon: Settings, label: "Settings", path: "/admin/settings" },
   ],
   teacher: [
