@@ -22,6 +22,7 @@ interface BatchWithStatus {
   studentCount: number;
   applicationStatus: "none" | "pending" | "approved" | "rejected";
   enrolled: boolean;
+  enrollment_open: boolean;
 }
 
 export default function StudentBatchApply() {
