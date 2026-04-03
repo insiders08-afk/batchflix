@@ -43,7 +43,7 @@ export default function StudentBatchApply() {
     // All active batches in the student's institute
     const { data: activeBatches } = await supabase
       .from("batches")
-      .select("id, name, course, teacher_name, schedule")
+      .select("id, name, course, teacher_name, schedule, enrollment_open")
       .eq("is_active", true);
 
     if (!activeBatches) { setLoading(false); return; }
