@@ -81,6 +81,7 @@ export default function StudentBatchApply() {
           studentCount: count || 0,
           enrolled,
           applicationStatus: enrolled ? "approved" : (appStatus || "none"),
+          enrollment_open: (b as any).enrollment_open ?? true,
         } as BatchWithStatus;
       })
     );
