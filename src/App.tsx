@@ -13,7 +13,7 @@ import NotFound from "./pages/NotFound";
 // All other pages — lazy loaded to reduce initial JS bundle
 const AdminDemo = lazy(() => import("./pages/demo/AdminDemo"));
 const StudentBatchApply = lazy(() => import("./pages/StudentBatchApply"));
-const AdminBatchApplications = lazy(() => import("./pages/AdminBatchApplications"));
+
 const RoleSelection = lazy(() => import("./pages/RoleSelection"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminBatches = lazy(() => import("./pages/AdminBatches"));
