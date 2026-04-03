@@ -1156,6 +1156,23 @@ export default function AdminBatches() {
                         {batch.studentCount} student{batch.studentCount !== 1 ? "s" : ""} enrolled
                       </span>
                     </div>
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <span className={`text-xs font-medium ${batch.enrollment_open ? "text-success" : "text-danger"}`}>
+                        {batch.enrollment_open ? "Enrollment Open" : "Enrollment Closed"}
+                      </span>
+                      <Switch
+                        checked={batch.enrollment_open}
+                        onCheckedChange={async (v) => {
+                          const { error } = await supabase.from("batches").update({ enrollment_open: v }).eq("id", batch.id);
+                          if (error) {
+                            toast({ title: "Error", description: error.message, variant: "destructive" });
+                          } else {
+                            setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, enrollment_open: v } : b));
+                            toast({ title: v ? "Enrollment opened" : "Enrollment closed" });
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
