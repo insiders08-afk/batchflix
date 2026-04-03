@@ -258,6 +258,7 @@ export type Database = {
           course: string
           created_at: string
           description: string | null
+          enrollment_open: boolean
           id: string
           institute_code: string
           is_active: boolean
@@ -272,6 +273,7 @@ export type Database = {
           course: string
           created_at?: string
           description?: string | null
+          enrollment_open?: boolean
           id?: string
           institute_code: string
           is_active?: boolean
@@ -286,6 +288,7 @@ export type Database = {
           course?: string
           created_at?: string
           description?: string | null
+          enrollment_open?: boolean
           id?: string
           institute_code?: string
           is_active?: boolean
@@ -476,6 +479,8 @@ export type Database = {
           owner_user_id: string | null
           phone: string
           status: Database["public"]["Enums"]["institute_status"]
+          student_enrollment_enabled: boolean
+          teacher_enrollment_enabled: boolean
           updated_at: string
         }
         Insert: {
@@ -491,6 +496,8 @@ export type Database = {
           owner_user_id?: string | null
           phone: string
           status?: Database["public"]["Enums"]["institute_status"]
+          student_enrollment_enabled?: boolean
+          teacher_enrollment_enabled?: boolean
           updated_at?: string
         }
         Update: {
@@ -506,6 +513,8 @@ export type Database = {
           owner_user_id?: string | null
           phone?: string
           status?: Database["public"]["Enums"]["institute_status"]
+          student_enrollment_enabled?: boolean
+          teacher_enrollment_enabled?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -804,6 +813,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_batch_enrollment_open: {
+        Args: { _batch_id: string }
+        Returns: boolean
+      }
+      check_institute_enrollment: {
+        Args: { _institute_code: string; _role: string }
+        Returns: boolean
+      }
       get_my_child_user_id: { Args: never; Returns: string }
       get_my_institute_code: { Args: never; Returns: string }
       has_role: {

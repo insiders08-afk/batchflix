@@ -22,6 +22,7 @@ interface BatchWithStatus {
   studentCount: number;
   applicationStatus: "none" | "pending" | "approved" | "rejected";
   enrolled: boolean;
+  enrollment_open: boolean;
 }
 
 export default function StudentBatchApply() {
@@ -42,7 +43,7 @@ export default function StudentBatchApply() {
     // All active batches in the student's institute
     const { data: activeBatches } = await supabase
       .from("batches")
-      .select("id, name, course, teacher_name, schedule")
+      .select("id, name, course, teacher_name, schedule, enrollment_open")
       .eq("is_active", true);
 
     if (!activeBatches) { setLoading(false); return; }
@@ -80,6 +81,7 @@ export default function StudentBatchApply() {
           studentCount: count || 0,
           enrolled,
           applicationStatus: enrolled ? "approved" : (appStatus || "none"),
+          enrollment_open: (b as any).enrollment_open ?? true,
         } as BatchWithStatus;
       })
     );
@@ -103,7 +105,13 @@ export default function StudentBatchApply() {
     });
 
     if (error) {
-      toast({ title: "Error applying", description: error.message, variant: "destructive" });
+      // Check if this is an enrollment-closed RLS error
+      const msg = error.message?.toLowerCase() || "";
+      if (msg.includes("row-level security") || msg.includes("policy")) {
+        toast({ title: "Enrollment closed", description: "Enrollment for this batch is currently closed by the admin.", variant: "destructive" });
+      } else {
+        toast({ title: "Error applying", description: error.message, variant: "destructive" });
+      }
     } else {
       toast({ title: "Application sent!", description: "Your teacher/admin will review your request." });
       setBatches(prev =>
@@ -185,6 +193,10 @@ export default function StudentBatchApply() {
                   {b.enrolled ? (
                     <Button disabled className="w-full h-8 text-xs bg-success-light text-success border border-success/20">
                       <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Already enrolled
+                    </Button>
+                  ) : !b.enrollment_open ? (
+                    <Button disabled className="w-full h-8 text-xs bg-danger-light text-danger border border-danger/20">
+                      <XCircle className="w-3.5 h-3.5 mr-1.5" /> Enrollment closed
                     </Button>
                   ) : b.applicationStatus === "pending" ? (
                     <Button disabled className="w-full h-8 text-xs bg-accent-light text-accent border border-accent/20">

@@ -25,7 +25,6 @@ const menusByRole: Record<Role, { icon: React.ElementType; label: string; path: 
     { icon: GraduationCap, label: "Students", path: "/admin/students" },
     { icon: ClipboardList, label: "Team", path: "/admin/team" },
     { icon: ShieldCheck, label: "Approvals", path: "/admin/approvals" },
-    { icon: BookMarked, label: "Batch Applications", path: "/admin/batch-applications" },
     { icon: Settings, label: "Settings", path: "/admin/settings" },
   ],
   teacher: [
@@ -81,7 +80,6 @@ export default function DashboardLayout({ children, title, role = "admin" }: Das
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [approvalsPending, setApprovalsPending] = useState(0);
-  const [batchAppsPending, setBatchAppsPending] = useState(0);
   const [userName, setUserName] = useState("Loading...");
   const [userInitials, setUserInitials] = useState("...");
   const [instituteName, setInstituteName] = useState("");
@@ -159,7 +157,7 @@ export default function DashboardLayout({ children, title, role = "admin" }: Das
     return () => subscription.unsubscribe();
   }, [navigate, role]);
 
-  // Fetch pending count for admin sidebar badges (BUG-09 fix: filter by institute_code)
+  // Fetch pending count for admin sidebar badges
   useEffect(() => {
     if (!isAdmin || !authChecked || !instituteCode) return;
     const fetchPending = async () => {
@@ -167,8 +165,7 @@ export default function DashboardLayout({ children, title, role = "admin" }: Das
         supabase.from("pending_requests").select("id").eq("status", "pending").eq("institute_code", instituteCode),
         supabase.from("batch_applications").select("id").eq("status", "pending"),
       ]);
-      setApprovalsPending(reqRes.data?.length || 0);
-      setBatchAppsPending(appRes.data?.length || 0);
+      setApprovalsPending((reqRes.data?.length || 0) + (appRes.data?.length || 0));
     };
     fetchPending();
   }, [isAdmin, authChecked, instituteCode]);
@@ -212,7 +209,6 @@ export default function DashboardLayout({ children, title, role = "admin" }: Das
         {menuItems.map((item) => {
           const active = isActiveItem(item.path);
           const showApprovalBadge = isAdmin && approvalsPending > 0 && item.path === "/admin/approvals";
-          const showBatchAppBadge = isAdmin && batchAppsPending > 0 && item.path === "/admin/batch-applications";
           return (
             <Link
               key={`${item.path}-${item.label}`}
@@ -231,11 +227,6 @@ export default function DashboardLayout({ children, title, role = "admin" }: Das
               {!collapsed && showApprovalBadge && (
                 <span className="text-xs font-bold bg-danger text-white rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
                   {approvalsPending}
-                </span>
-              )}
-              {!collapsed && showBatchAppBadge && (
-                <span className="text-xs font-bold bg-danger text-white rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                  {batchAppsPending}
                 </span>
               )}
             </Link>

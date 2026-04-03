@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { JS_DAY_ABBREVS } from "@/lib/batchTiming";
 import { motion } from "framer-motion";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -55,6 +56,7 @@ interface Batch {
   is_active: boolean;
   institute_code: string;
   studentCount: number;
+  enrollment_open: boolean;
 }
 
 interface Teacher {
@@ -959,7 +961,7 @@ export default function AdminBatches() {
 
     const { data, count } = await supabase
       .from("batches")
-      .select("id, name, course, teacher_name, teacher_id, pending_teacher_name, schedule, is_active, institute_code", { count: "exact" })
+      .select("id, name, course, teacher_name, teacher_id, pending_teacher_name, schedule, is_active, institute_code, enrollment_open", { count: "exact" })
       .eq("institute_code", code)
       .order("created_at", { ascending: false })
       .range(from, to);
@@ -979,7 +981,7 @@ export default function AdminBatches() {
         countMap[e.batch_id] = (countMap[e.batch_id] || 0) + 1;
       });
     }
-    const enriched = data.map((b) => ({ ...b, studentCount: countMap[b.id] || 0 }));
+    const enriched = data.map((b) => ({ ...b, studentCount: countMap[b.id] || 0, enrollment_open: (b as any).enrollment_open ?? true }));
 
     if (reset) {
       setBatches(enriched);
@@ -1153,6 +1155,23 @@ export default function AdminBatches() {
                       <span>
                         {batch.studentCount} student{batch.studentCount !== 1 ? "s" : ""} enrolled
                       </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <span className={`text-xs font-medium ${batch.enrollment_open ? "text-success" : "text-danger"}`}>
+                        {batch.enrollment_open ? "Enrollment Open" : "Enrollment Closed"}
+                      </span>
+                      <Switch
+                        checked={batch.enrollment_open}
+                        onCheckedChange={async (v) => {
+                          const { error } = await supabase.from("batches").update({ enrollment_open: v }).eq("id", batch.id);
+                          if (error) {
+                            toast({ title: "Error", description: error.message, variant: "destructive" });
+                          } else {
+                            setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, enrollment_open: v } : b));
+                            toast({ title: v ? "Enrollment opened" : "Enrollment closed" });
+                          }
+                        }}
+                      />
                     </div>
                   </div>
 
