@@ -960,7 +960,7 @@ export default function AdminBatches() {
 
     const { data, count } = await supabase
       .from("batches")
-      .select("id, name, course, teacher_name, teacher_id, pending_teacher_name, schedule, is_active, institute_code", { count: "exact" })
+      .select("id, name, course, teacher_name, teacher_id, pending_teacher_name, schedule, is_active, institute_code, enrollment_open", { count: "exact" })
       .eq("institute_code", code)
       .order("created_at", { ascending: false })
       .range(from, to);
