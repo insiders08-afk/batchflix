@@ -194,6 +194,10 @@ export default function StudentBatchApply() {
                     <Button disabled className="w-full h-8 text-xs bg-success-light text-success border border-success/20">
                       <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Already enrolled
                     </Button>
+                  ) : !b.enrollment_open ? (
+                    <Button disabled className="w-full h-8 text-xs bg-danger-light text-danger border border-danger/20">
+                      <XCircle className="w-3.5 h-3.5 mr-1.5" /> Enrollment closed
+                    </Button>
                   ) : b.applicationStatus === "pending" ? (
                     <Button disabled className="w-full h-8 text-xs bg-accent-light text-accent border border-accent/20">
                       <Hourglass className="w-3.5 h-3.5 mr-1.5" /> Application pending...
