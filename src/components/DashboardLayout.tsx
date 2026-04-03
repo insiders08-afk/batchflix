@@ -157,7 +157,7 @@ export default function DashboardLayout({ children, title, role = "admin" }: Das
     return () => subscription.unsubscribe();
   }, [navigate, role]);
 
-  // Fetch pending count for admin sidebar badges (BUG-09 fix: filter by institute_code)
+  // Fetch pending count for admin sidebar badges
   useEffect(() => {
     if (!isAdmin || !authChecked || !instituteCode) return;
     const fetchPending = async () => {
@@ -165,8 +165,7 @@ export default function DashboardLayout({ children, title, role = "admin" }: Das
         supabase.from("pending_requests").select("id").eq("status", "pending").eq("institute_code", instituteCode),
         supabase.from("batch_applications").select("id").eq("status", "pending"),
       ]);
-      setApprovalsPending(reqRes.data?.length || 0);
-      setBatchAppsPending(appRes.data?.length || 0);
+      setApprovalsPending((reqRes.data?.length || 0) + (appRes.data?.length || 0));
     };
     fetchPending();
   }, [isAdmin, authChecked, instituteCode]);
