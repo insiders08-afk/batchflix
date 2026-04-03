@@ -89,13 +89,24 @@ export default function StudentAuth() {
       // LIMIT-06: Check institute_code exists before creating account
       const { data: institute } = await supabase
         .from("institutes")
-        .select("id")
+        .select("id, student_enrollment_enabled")
         .eq("institute_code", instituteCode)
         .maybeSingle();
       if (!institute) {
         toast({
           title: "Institute not found",
           description: `No institute with code "${instituteCode}" exists. Check with your admin for the correct code.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Check if student enrollment is enabled
+      if (institute.student_enrollment_enabled === false) {
+        toast({
+          title: "Enrollment Disabled",
+          description: "Admin has switched off student enrollment in this batch space.",
           variant: "destructive",
         });
         setLoading(false);
