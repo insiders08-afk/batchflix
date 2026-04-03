@@ -980,7 +980,7 @@ export default function AdminBatches() {
         countMap[e.batch_id] = (countMap[e.batch_id] || 0) + 1;
       });
     }
-    const enriched = data.map((b) => ({ ...b, studentCount: countMap[b.id] || 0 }));
+    const enriched = data.map((b) => ({ ...b, studentCount: countMap[b.id] || 0, enrollment_open: (b as any).enrollment_open ?? true }));
 
     if (reset) {
       setBatches(enriched);
