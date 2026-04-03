@@ -229,11 +229,6 @@ export default function DashboardLayout({ children, title, role = "admin" }: Das
                   {approvalsPending}
                 </span>
               )}
-              {!collapsed && showBatchAppBadge && (
-                <span className="text-xs font-bold bg-danger text-white rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                  {batchAppsPending}
-                </span>
-              )}
             </Link>
           );
         })}
