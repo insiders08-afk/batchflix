@@ -157,6 +157,9 @@ export default function ParentAuth() {
       }
 
       if (profile.status === "approved" || profile.status === "active") {
+        // Persist session so Index.tsx doesn't auto-sign-out
+        localStorage.setItem("batchhub_remember_me", "true");
+        sessionStorage.removeItem("batchhub_session_only");
         navigate("/parent");
       } else if (profile.status === "rejected") {
         toast({ title: "Access Denied", description: "Your request was rejected. Please contact the institute admin.", variant: "destructive" });
