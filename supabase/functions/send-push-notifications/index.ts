@@ -55,10 +55,10 @@ async function hkdf(
   length: number
 ): Promise<Uint8Array> {
   const keyMaterial = await crypto.subtle.importKey(
-    "raw", ikm, { name: "HKDF" }, false, ["deriveBits"]
+    "raw", ikm.buffer as ArrayBuffer, { name: "HKDF" }, false, ["deriveBits"]
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "HKDF", hash: "SHA-256", salt, info },
+    { name: "HKDF", hash: "SHA-256", salt: salt.buffer as ArrayBuffer, info: info.buffer as ArrayBuffer },
     keyMaterial,
     length * 8
   );
