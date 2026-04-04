@@ -51,6 +51,10 @@ export default function OwnerAuth() {
         return;
       }
 
+      // Set session persistence flag — REQUIRED so Index.tsx doesn't sign us out on reload
+      localStorage.setItem("batchhub_remember_me", "true");
+      sessionStorage.removeItem("batchhub_session_only");
+
       // Ensure app_owner has a profiles row (create one if missing)
       const { data: existingProfile } = await supabase
         .from("profiles")

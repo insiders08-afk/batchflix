@@ -52,7 +52,7 @@ export default function SuperAdminAuth() {
         return;
       }
 
-      // Persist session so Index.tsx doesn't auto-sign-out
+      // Set session persistence flag — REQUIRED so Index.tsx doesn't sign us out on reload
       localStorage.setItem("batchhub_remember_me", "true");
       sessionStorage.removeItem("batchhub_session_only");
 

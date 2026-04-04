@@ -306,6 +306,15 @@ export default function AdminAuth() {
       });
       if (profError) throw profError;
 
+      // Also insert into user_roles so the login flow can verify admin access
+      const { error: roleError } = await supabase.from("user_roles").insert({
+        user_id: userId,
+        role: "admin",
+        institute_code: code,
+        city: effectiveCity,
+      });
+      if (roleError && !roleError.message?.includes("duplicate")) throw roleError;
+
       setPendingInstituteName(regForm.instituteName);
       setPendingCity(effectiveCity);
       fetchSuperAdminPhone(effectiveCity);

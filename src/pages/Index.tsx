@@ -203,15 +203,34 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
+    // Never touch auth state if we're on the password-reset callback URL.
+    // Supabase embeds the recovery token in the hash; Index.tsx must stay completely
+    // hands-off in that case or it will invalidate the token before ResetPassword.tsx
+    // can consume it.
+    const isResetPasswordPage =
+      window.location.pathname === "/reset-password" ||
+      window.location.hash.includes("type=recovery") ||
+      window.location.hash.includes("access_token");
+
+    if (isResetPasswordPage) {
+      setAuthChecking(false);
+      return;
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const noRemember = localStorage.getItem("batchhub_remember_me") !== "true";
-        const sessionActive = sessionStorage.getItem("batchhub_session_only") === "true";
-        if (noRemember && !sessionActive) {
+        const rememberMe = localStorage.getItem("batchhub_remember_me") === "true";
+        const sessionOnly = sessionStorage.getItem("batchhub_session_only") === "true";
+
+        // Only sign out if NEITHER persistent session NOR session-only flag is set.
+        // This prevents signing out users who just logged in and haven't had the flag
+        // written yet (rare race), while still cleaning up truly stale sessions.
+        if (!rememberMe && !sessionOnly) {
           await supabase.auth.signOut();
           setAuthChecking(false);
           return;
         }
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")

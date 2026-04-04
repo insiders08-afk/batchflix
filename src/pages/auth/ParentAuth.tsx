@@ -143,6 +143,10 @@ export default function ParentAuth() {
       });
       if (error) throw error;
 
+      // Set session persistence flag — REQUIRED so Index.tsx doesn't sign us out on reload
+      localStorage.setItem("batchhub_remember_me", "true");
+      sessionStorage.removeItem("batchhub_session_only");
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("status, institute_code, full_name")
@@ -153,6 +157,7 @@ export default function ParentAuth() {
       if (!profile) {
         toast({ title: "Account not found", description: "No parent account linked to this email.", variant: "destructive" });
         await supabase.auth.signOut();
+        localStorage.removeItem("batchhub_remember_me");
         return;
       }
 
@@ -164,6 +169,7 @@ export default function ParentAuth() {
       } else if (profile.status === "rejected") {
         toast({ title: "Access Denied", description: "Your request was rejected. Please contact the institute admin.", variant: "destructive" });
         await supabase.auth.signOut();
+        localStorage.removeItem("batchhub_remember_me");
       } else {
         setPendingUserId(data.user.id);
         setSubmittedName(profile.full_name);
