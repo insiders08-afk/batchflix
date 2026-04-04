@@ -54,7 +54,7 @@ async function sendWebPush(
   const enc = new TextEncoder();
   const plaintext = enc.encode(payload);
 
-  const recipientPublicKey = await crypto.subtle.importKey("raw", base64UrlDecode(subscription.p256dh), { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const recipientPublicKey = await crypto.subtle.importKey("raw", base64UrlDecode(subscription.p256dh).buffer as ArrayBuffer, { name: "ECDH", namedCurve: "P-256" }, false, []);
   const senderKeyPair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
   const sharedSecret = await crypto.subtle.deriveBits({ name: "ECDH", public: recipientPublicKey }, senderKeyPair.privateKey, 256);
   const senderPublicKeyRaw = await crypto.subtle.exportKey("raw", senderKeyPair.publicKey);
