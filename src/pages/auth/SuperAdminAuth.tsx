@@ -52,6 +52,10 @@ export default function SuperAdminAuth() {
         return;
       }
 
+      // Persist session so Index.tsx doesn't auto-sign-out
+      localStorage.setItem("batchhub_remember_me", "true");
+      sessionStorage.removeItem("batchhub_session_only");
+
       navigate("/superadmin");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Login failed";
