@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Zap, Shield, CheckCircle2, Clock, XCircle, Loader2, Eye, EyeOff, Phone, KeyRound, Search, ChevronDown } from "lucide-react";
+import { ArrowLeft, Zap, Shield, CheckCircle2, Clock, XCircle, Loader2, Eye, EyeOff, Phone, KeyRound, Search, ChevronDown, RotateCw } from "lucide-react";
 import InstallButton from "@/components/InstallButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -151,6 +151,7 @@ export default function AdminAuth() {
   const { toast } = useToast();
   const [step, setStep] = useState<Screen>("register");
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [pendingInstituteName, setPendingInstituteName] = useState("");
   const [pendingCity, setPendingCity] = useState("");
   const [superAdminPhone, setSuperAdminPhone] = useState<string | null>(null);
@@ -218,6 +219,31 @@ export default function AdminAuth() {
       if (fallback?.phone) setSuperAdminPhone(fallback.phone);
     } catch {
       // silently ignore
+    }
+  };
+
+  const checkApprovalStatus = async () => {
+    setRefreshing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("status, role")
+        .eq("user_id", session.user.id)
+        .single();
+
+      if (profile?.status === "approved") {
+        toast({ title: "Approved!", description: "Your institute has been approved. Redirecting to dashboard..." });
+        navigate(profile.role === "admin" ? "/admin" : "/login");
+      } else {
+        toast({ title: "Still Pending", description: "Your request is still being reviewed by the city partner." });
+      }
+    } catch (err) {
+      console.error("Refresh failed:", err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -465,12 +491,22 @@ export default function AdminAuth() {
             </div>
 
             {/* Step 2: Processing */}
-            <div className="flex gap-4 items-start">
+            <div className="flex gap-4 items-start relative group">
               <div className="w-8 h-8 shrink-0 rounded-full bg-accent-light flex items-center justify-center border border-accent/20">
                 <div className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Request is being processed</p>
+              <div className="flex-1 pr-8">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground">Request is being processed</p>
+                  <button 
+                    onClick={checkApprovalStatus}
+                    disabled={refreshing}
+                    className="p-1.5 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-primary disabled:opacity-50"
+                    title="Check status now"
+                  >
+                    <RotateCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   For more details, you can contact your <span className="font-semibold">{pendingCity}</span> super admin:
                 </p>
