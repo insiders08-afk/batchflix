@@ -199,7 +199,7 @@ export default function OwnerDashboard() {
         return;
       }
 
-      // 2. Find the user ID from the profiles table (registered during application)
+      // 2. Find the user account created during application via edge function
       const { data: userProfile, error: profileError } = await supabase
         .from("profiles")
         .select("user_id")
@@ -207,13 +207,18 @@ export default function OwnerDashboard() {
         .eq("role", "super_admin")
         .maybeSingle();
 
-      if (profileError || !userProfile) {
-        throw new Error("Could not find the registered user account for this application.");
+      if (profileError) throw new Error(`Profile lookup failed: ${profileError.message}`);
+
+      if (!userProfile) {
+        throw new Error(
+          `No account found for ${app.email}. This applicant may have applied through the old form before the self-registration system was in place. Please ask them to re-apply through the new City Partner portal.`
+        );
       }
 
       const userId = userProfile.user_id;
 
       // 3. Grant the super_admin role in user_roles
+      // NOTE: requires unique constraint on (user_id, role) — already added via migration
       const { error: roleError } = await supabase.from("user_roles").upsert(
         {
           user_id: userId,
@@ -222,14 +227,14 @@ export default function OwnerDashboard() {
         },
         { onConflict: "user_id,role" }
       );
-      if (roleError) throw roleError;
+      if (roleError) throw new Error(`Role grant failed: ${roleError.message}`);
 
       // 4. Update profile status to approved
       const { error: statusError } = await supabase
         .from("profiles")
         .update({ status: "approved" })
         .eq("user_id", userId);
-      if (statusError) throw statusError;
+      if (statusError) throw new Error(`Profile update failed: ${statusError.message}`);
 
       // 5. Update application status
       const { error: updateError } = await supabase
@@ -239,18 +244,17 @@ export default function OwnerDashboard() {
           notes: `Approved on ${new Date().toLocaleDateString("en-IN")} by ${ownerName}.`,
         })
         .eq("id", app.id);
-
-      if (updateError) throw updateError;
+      if (updateError) throw new Error(`Application status update failed: ${updateError.message}`);
 
       toast({
         title: "Application approved ✓",
-        description: `${app.full_name} is now the City Partner for ${app.city}. They can now log in with their password.`,
+        description: `${app.full_name} is now the City Partner for ${app.city}. They can sign in immediately with their password.`,
       });
-      
+
       fetchAll();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to approve";
-      toast({ title: "Error", description: message, variant: "destructive" });
+      toast({ title: "Approval Error", description: message, variant: "destructive" });
     } finally {
       setActionLoading(null);
     }
