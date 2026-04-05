@@ -282,8 +282,6 @@ export default function SuperAdminAuth() {
     } finally {
       setLoading(false);
     }
-
-    }
   };
 
   if (step === "pending") {
