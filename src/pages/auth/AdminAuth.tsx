@@ -296,42 +296,35 @@ export default function AdminAuth() {
     });
   }, [navigate]);
 
-  useEffect(() => {
-    let profileSubscription: any;
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    if (step === "pending") {
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
-          // Setup Realtime listener
-          profileSubscription = supabase
-            .channel(`profile-status-${user.id}`)
-            .on(
-              'postgres_changes',
-              {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'profiles',
-                filter: `user_id=eq.${user.id}`
-              },
-              (payload) => {
-                const newStatus = payload.new.status;
-                if (newStatus === 'approved') {
-                  toast({ title: "Approved!", description: "Your institute has been approved. Redirecting..." });
-                  navigate("/admin", { replace: true });
-                } else if (newStatus === 'rejected') {
-                  setStep('rejected');
-                }
-              }
-            )
-            .subscribe();
-        }
-      });
-    }
+  useEffect(() => {
+    if (step !== "pending") return;
+
+    const poll = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("status, role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (profile?.status === "approved") {
+        toast({ title: "Approved!", description: "Your institute has been approved. Redirecting..." });
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        navigate("/admin", { replace: true });
+      } else if (profile?.status === "rejected") {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setStep("rejected");
+      }
+    };
+
+    intervalRef.current = setInterval(poll, 5000);
 
     return () => {
-      if (profileSubscription) {
-        supabase.removeChannel(profileSubscription);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [step, navigate, toast]);
 
