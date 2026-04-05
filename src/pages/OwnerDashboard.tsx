@@ -181,7 +181,7 @@ export default function OwnerDashboard() {
   const approveApplication = async (app: Application) => {
     setActionLoading(app.id);
     try {
-      // Check if a super admin already exists for this city
+      // 1. Check if city is still available
       const { data: existingAdmin } = await supabase
         .from("user_roles")
         .select("id")
@@ -199,42 +199,54 @@ export default function OwnerDashboard() {
         return;
       }
 
-      const tempPassword = `BatchHub@${Math.random().toString(36).slice(2, 10)}`;
-      await supabase.functions.invoke("fix-superadmin", {
-        body: {
-          action: "create_super_admin",
-          email: app.email,
-          password: tempPassword,
-          city: app.city,
-          fullName: app.full_name,
-        },
-      });
+      // 2. Find the user ID from the profiles table (registered during application)
+      const { data: userProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("email", app.email)
+        .eq("role", "super_admin")
+        .maybeSingle();
 
-      // BUG-03 fix: Don't store plaintext password in DB notes
+      if (profileError || !userProfile) {
+        throw new Error("Could not find the registered user account for this application.");
+      }
+
+      const userId = userProfile.user_id;
+
+      // 3. Grant the super_admin role in user_roles
+      const { error: roleError } = await supabase.from("user_roles").upsert(
+        {
+          user_id: userId,
+          role: "super_admin",
+          city: app.city,
+        },
+        { onConflict: "user_id,role" }
+      );
+      if (roleError) throw roleError;
+
+      // 4. Update profile status to approved
+      const { error: statusError } = await supabase
+        .from("profiles")
+        .update({ status: "approved" })
+        .eq("user_id", userId);
+      if (statusError) throw statusError;
+
+      // 5. Update application status
       const { error: updateError } = await supabase
         .from("super_admin_applications")
         .update({
           status: "approved",
-          notes: `Approved on ${new Date().toLocaleDateString("en-IN")}. Temp password shared securely.`,
+          notes: `Approved on ${new Date().toLocaleDateString("en-IN")} by ${ownerName}.`,
         })
         .eq("id", app.id);
 
       if (updateError) throw updateError;
 
-      // BUG-03 fix: Copy password to clipboard instead of showing in toast
-      try {
-        await navigator.clipboard.writeText(tempPassword);
-        toast({
-          title: "Application approved ✓",
-          description: `${app.full_name} is now a City Super Admin for ${app.city}. Temporary password has been copied to your clipboard — share it securely with them.`,
-        });
-      } catch {
-        // Fallback if clipboard API fails (e.g. non-HTTPS)
-        toast({
-          title: "Application approved ✓",
-          description: `${app.full_name} is now a City Super Admin for ${app.city}. Temp password: ${tempPassword} — note it down now, it won't be shown again.`,
-        });
-      }
+      toast({
+        title: "Application approved ✓",
+        description: `${app.full_name} is now the City Partner for ${app.city}. They can now log in with their password.`,
+      });
+      
       fetchAll();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to approve";
@@ -244,12 +256,26 @@ export default function OwnerDashboard() {
     }
   };
 
-  const rejectApplication = async (appId: string, name: string) => {
-    setActionLoading(appId);
+  const rejectApplication = async (app: Application) => {
+    setActionLoading(app.id);
     try {
-      const { error } = await supabase.from("super_admin_applications").update({ status: "rejected" }).eq("id", appId);
+      // Update application status
+      const { error } = await supabase.from("super_admin_applications").update({ status: "rejected" }).eq("id", app.id);
       if (error) throw error;
-      toast({ title: "Application rejected", description: `${name}'s application has been rejected.` });
+
+      // Also update profile status so login shows "rejected" screen
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("email", app.email)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      
+      if (userProfile) {
+        await supabase.from("profiles").update({ status: "rejected" }).eq("user_id", userProfile.user_id);
+      }
+
+      toast({ title: "Application rejected", description: `${app.full_name}'s application has been rejected.` });
       fetchAll();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to reject";
@@ -494,7 +520,7 @@ export default function OwnerDashboard() {
                               variant="outline"
                               className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 gap-1.5"
                               disabled={actionLoading === app.id}
-                              onClick={() => rejectApplication(app.id, app.full_name)}
+                              onClick={() => rejectApplication(app)}
                             >
                               <XCircle className="w-3.5 h-3.5" />
                               Reject
