@@ -217,30 +217,55 @@ export default function AdminAuth() {
       maybeSingle();
       if (fallback?.phone) setSuperAdminPhone(fallback.phone);
     } catch {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       // silently ignore
-    }};const handleRegister = async (e: React.FormEvent) => {e.preventDefault();const effectiveCity = regForm.city.trim();if (!effectiveCity) {toast({ title: "City required", description: "Please select or type your city.", variant: "destructive" });return;} // Institute code: already enforced by input, but double-check
+    }
+  };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        // Fetch profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, status, institute_code")
+          .eq("user_id", session.user.id)
+          .single();
+
+        if (profile && profile.role === "admin") {
+          if (profile.status === "approved") {
+            navigate("/admin", { replace: true });
+          } else if (profile.status === "pending") {
+            // Fetch exact institute details for the card
+            if (profile.institute_code) {
+              const { data: institute } = await supabase
+                .from("institutes")
+                .select("institute_name, city")
+                .eq("institute_code", profile.institute_code)
+                .single();
+
+              if (institute) {
+                setPendingInstituteName(institute.institute_name);
+                setPendingCity(institute.city || "");
+                fetchSuperAdminPhone(institute.city || "");
+              }
+            }
+            setStep("pending");
+          } else if (profile.status === "rejected") {
+            setStep("rejected");
+          }
+        }
+      }
+    });
+  }, [navigate]);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const effectiveCity = regForm.city.trim();
+    if (!effectiveCity) {
+      toast({ title: "City required", description: "Please select or type your city.", variant: "destructive" });
+      return;
+    }
+    // Institute code: already enforced by input, but double-check
     const code = regForm.instituteId.trim();if (!code || code.length < 3) {toast({ title: "Invalid Institute Code", description: "Must be at least 3 characters (A–Z, 0–9, hyphen).", variant: "destructive" });return;} // LIMIT-09: Validate password strength
     const pwError = validatePassword(regForm.password);if (pwError) {toast({ title: "Weak Password", description: pwError, variant: "destructive" });return;}
     // LIMIT-12: Validate phone number
@@ -315,9 +340,8 @@ export default function AdminAuth() {
       });
       if (roleError && !roleError.message?.includes("duplicate")) throw roleError;
 
-      // FIX: End the session locally so the user isn't improperly redirected if they tap "Back"
-      // Since they are just pending, they shouldn't hold an active token yet.
-      await supabase.auth.signOut().catch(() => {});
+      // Session remains active so if they return to the app, Index.tsx detects they are logged in 
+      // but pending, and reroutes them straight to this screen.
 
       setPendingInstituteName(regForm.instituteName);
       setPendingCity(effectiveCity);
@@ -415,44 +439,76 @@ export default function AdminAuth() {
   if (step === "pending") {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-sm">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center w-full max-w-md">
           <div className="relative w-20 h-20 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-accent to-orange-400 opacity-20 animate-ping" />
             <div className="relative w-20 h-20 rounded-full gradient-hero flex items-center justify-center shadow-lg">
               <Clock className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-display font-bold mb-2">Pending City Partner Approval</h2>
-          <p className="text-muted-foreground mb-4">
-            <span className="font-semibold text-foreground">{pendingInstituteName}</span> has been submitted and is pending review by {pendingCity ? `the ${pendingCity} City Partner` : "your city's BatchHub partner"}.
+          <h2 className="text-2xl font-display font-bold mb-2">Request Under Audit</h2>
+          <p className="text-muted-foreground mb-6">
+            <span className="font-semibold text-foreground">{pendingInstituteName}</span>
           </p>
-          <div className="bg-card border border-border/50 rounded-xl p-5 text-left space-y-3 mb-6 shadow-card">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-success-light flex items-center justify-center text-success text-xs font-bold">1</div>
-              <p className="text-sm">Institute registered ✓</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-accent-light flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+          
+          <div className="bg-card border border-border/50 rounded-xl p-6 text-left space-y-6 mb-6 shadow-card">
+            
+            {/* Step 1: Submitted */}
+            <div className="flex gap-4 items-start">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-success-light flex items-center justify-center text-success border border-success/20">
+                <CheckCircle2 className="w-5 h-5" />
               </div>
-              <p className="text-sm text-muted-foreground">City Partner is reviewing your govt. registration...</p>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Request Submitted</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Your request has been submitted and gone to our city partner for approval.</p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-bold">3</div>
-              <p className="text-sm text-muted-foreground">Access to admin dashboard granted</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-bold">4</div>
-              <p className="text-sm text-muted-foreground">
-                Once approved, try <strong>signing in again</strong> to access your dashboard.
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground mb-4">The City Partner for {pendingCity || "your city"} will review and approve within 24 hours.</p>
-          <Link to="/"><Button variant="outline" size="sm">Back to Home</Button></Link>
-        </motion.div>
-      </div>);
 
+            {/* Step 2: Processing */}
+            <div className="flex gap-4 items-start">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-accent-light flex items-center justify-center border border-accent/20">
+                <div className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Request is being processed</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  For more details, you can contact your <span className="font-semibold">{pendingCity}</span> super admin:
+                </p>
+                {superAdminPhone ? (
+                  <a href={`tel:${superAdminPhone}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-2 bg-primary/5 text-primary rounded-md font-medium text-sm hover:underline hover:bg-primary/10 transition-colors">
+                    <Phone className="w-3.5 h-3.5" />
+                    {superAdminPhone}
+                  </a>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1 italic">Contacting super admin network...</p>
+                )}
+              </div>
+            </div>
+
+            {/* Step 3: Waiting */}
+            <div className="flex gap-4 items-start">
+              <div className="w-8 h-8 shrink-0 rounded-full border border-border flex items-center justify-center text-muted-foreground text-xs font-bold bg-muted/30">
+                3
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">Waiting for approval</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Till then, you can explore our platform features.
+                </p>
+                <Link to="/#features" className="inline-block mt-2 text-sm text-primary font-medium hover:underline">
+                  Explore Features →
+                </Link>
+              </div>
+            </div>
+
+          </div>
+          
+          <Button variant="outline" className="w-full h-11" onClick={() => { supabase.auth.signOut(); navigate("/"); }}>
+            Sign Out & Return Home
+          </Button>
+        </motion.div>
+      </div>
+    );
   }
 
   if (step === "rejected") {

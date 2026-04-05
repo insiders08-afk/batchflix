@@ -50,6 +50,15 @@ const roleToPath: Record<string, string> = {
   app_owner: "/owner",
 };
 
+const roleToAuthPath: Record<string, string> = {
+  admin: "/auth/admin",
+  teacher: "/auth/teacher",
+  student: "/auth/student",
+  parent: "/auth/parent",
+  super_admin: "/auth/superadmin",
+  app_owner: "/auth/owner",
+};
+
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Why Us", href: "#problem-solution" },
@@ -233,13 +242,17 @@ export default function Index() {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, status")
           .eq("user_id", session.user.id)
           .single();
-        const path = profile?.role ? roleToPath[profile.role] : null;
-        if (path) {
-          navigate(path, { replace: true });
-          return;
+        
+        if (profile?.role) {
+          // If approved, go to dashboard. Otherwise, go to their auth page to see the pending/rejected card.
+          const path = profile.status === "approved" ? roleToPath[profile.role] : roleToAuthPath[profile.role];
+          if (path) {
+            navigate(path, { replace: true });
+            return;
+          }
         }
       }
       setAuthChecking(false);
