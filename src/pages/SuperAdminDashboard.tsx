@@ -250,6 +250,7 @@ export default function SuperAdminDashboard() {
             {adminName && <span className="text-sm text-muted-foreground hidden sm:inline">· {adminName}</span>}
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link to="/">
               <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
                 <ArrowLeft className="w-4 h-4" /> Home

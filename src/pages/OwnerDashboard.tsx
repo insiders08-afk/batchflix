@@ -319,6 +319,7 @@ export default function OwnerDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link to="/">
               <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="w-4 h-4" /> Home
