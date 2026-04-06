@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Zap, UserCircle, Eye, EyeOff, Loader2, CheckCircle2, XCircle, KeyRound } from "lucide-react";
 import InstallButton from "@/components/InstallButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { validatePassword, validatePhone, normalizeInstituteCode } from "@/lib/validation";
