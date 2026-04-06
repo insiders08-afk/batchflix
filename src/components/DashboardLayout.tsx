@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import InstallButton from "@/components/InstallButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 
 type Role = "admin" | "teacher" | "student" | "parent";
