@@ -343,6 +343,7 @@ export default function Index() {
 
             {/* Right actions */}
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               <InstallButton />
               <Link to="/role-select" className="hidden sm:inline-flex">
                 <button
