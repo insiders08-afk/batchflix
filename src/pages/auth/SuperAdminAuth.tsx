@@ -10,6 +10,7 @@ import {
   Camera, AlertCircle, ChevronDown, Clock, XCircle
 } from "lucide-react";
 import InstallButton from "@/components/InstallButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { INDIA_CITIES } from "@/lib/constants";
