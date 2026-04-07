@@ -611,17 +611,25 @@ export default function BatchWorkspace() {
           return;
         }
         const ext = dppFile.name.split(".").pop() || "bin";
-        const path = `dpp/${batchId}/${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("chat-files").upload(path, dppFile, { upsert: false });
+        const path = `${currentUserId}/${Date.now()}-dpp.${ext}`;
+        const { error: upErr } = await supabase.storage.from("homework-files").upload(path, dppFile, { contentType: dppFile.type, upsert: false });
         if (upErr) {
-          toast({ title: "File upload failed", variant: "destructive" });
+          console.error("[dpp-upload]", upErr);
+          toast({ title: "File upload failed", description: upErr.message, variant: "destructive" });
           setSavingDpp(false);
           return;
         }
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("chat-files").getPublicUrl(path);
-        file_url = publicUrl;
+        // Generate a signed URL since homework-files is private
+        const { data: signedData, error: signErr } = await supabase.storage
+          .from("homework-files")
+          .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 days
+        if (signErr || !signedData) {
+          console.error("[dpp-signed-url]", signErr);
+          toast({ title: "Failed to generate file URL", variant: "destructive" });
+          setSavingDpp(false);
+          return;
+        }
+        file_url = signedData.signedUrl;
         file_name = dppFile.name;
       }
       const { error } = await supabase.from("homeworks").insert({

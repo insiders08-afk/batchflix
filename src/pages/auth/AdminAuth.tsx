@@ -257,8 +257,11 @@ export default function AdminAuth() {
     }
   };
 
+  // Track whether user explicitly chose login/register to prevent auto-redirect to pending
+  const [userExplicitStep, setUserExplicitStep] = useState(false);
+
   useEffect(() => {
-    let profileSubscription: any;
+    if (userExplicitStep) return; // Don't auto-redirect if user explicitly chose a step
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
@@ -295,7 +298,7 @@ export default function AdminAuth() {
         }
       }
     });
-  }, [navigate]);
+  }, [navigate, userExplicitStep]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
