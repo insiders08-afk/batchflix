@@ -257,8 +257,11 @@ export default function AdminAuth() {
     }
   };
 
+  // Track whether user explicitly chose login/register to prevent auto-redirect to pending
+  const [userExplicitStep, setUserExplicitStep] = useState(false);
+
   useEffect(() => {
-    let profileSubscription: any;
+    if (userExplicitStep) return; // Don't auto-redirect if user explicitly chose a step
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
@@ -295,7 +298,7 @@ export default function AdminAuth() {
         }
       }
     });
-  }, [navigate]);
+  }, [navigate, userExplicitStep]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -587,6 +590,9 @@ export default function AdminAuth() {
           <Button variant="outline" className="w-full h-11 mb-3" onClick={() => { supabase.auth.signOut(); navigate("/"); }}>
             Sign Out & Return Home
           </Button>
+          <Button variant="ghost" className="w-full h-11 mb-3 text-primary" onClick={() => { supabase.auth.signOut(); setUserExplicitStep(true); setStep("login"); }}>
+            Sign in with a different account
+          </Button>
           <p className="text-xs text-muted-foreground mt-3">
             You can check your request details later by simply signing in again. Do not register again.
           </p>
@@ -659,13 +665,13 @@ export default function AdminAuth() {
             {/* Toggle */}
             <div className="flex rounded-lg bg-muted p-1 mb-6">
               <button
-                onClick={() => setStep("register")}
+                onClick={() => { setUserExplicitStep(true); setStep("register"); }}
                 className={`flex-1 text-sm font-medium py-2 rounded-md transition-all ${step === "register" ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}>
                 
                 Register Institute
               </button>
               <button
-                onClick={() => setStep("login")}
+                onClick={() => { setUserExplicitStep(true); setStep("login"); }}
                 className={`flex-1 text-sm font-medium py-2 rounded-md transition-all ${step === "login" ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}>
                 
                 Sign In
