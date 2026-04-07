@@ -301,7 +301,7 @@ export default function AdminApprovals() {
 
       if (action === "approved") {
         const extra = (req.extra_data as Record<string, string>) || {};
-        const profileUpdates: Record<string, unknown> = { status: "approved" };
+        const profileUpdates: { status: "approved" | "rejected"; role_based_code?: string } = { status: "approved" };
         if (req.role === "student" && extra.studentId) profileUpdates.role_based_code = extra.studentId;
         if (req.role === "teacher" && extra.teacherId) profileUpdates.role_based_code = extra.teacherId;
 
@@ -323,7 +323,7 @@ export default function AdminApprovals() {
         }
 
         if (req.role === "parent" && childId) {
-          const existingExtra = (req.extra_data as Record<string, unknown>) || {};
+          const existingExtra = (req.extra_data as Record<string, any>) || {};
           await supabase.from("pending_requests").update({ extra_data: { ...existingExtra, child_id: childId } }).eq("id", req.id);
         }
         toast({ title: "Approved!", description: `${req.full_name} has been granted ${req.role} access.` });

@@ -286,8 +286,7 @@ export default function Index() {
 
   return (
     <div
-      className="min-h-screen overflow-x-hidden antialiased"
-      style={{ backgroundColor: "#F5F1E8", color: "#3D2B1F", fontFamily: "'Inter', system-ui, sans-serif" }}
+      className="min-h-screen overflow-x-hidden antialiased bg-background text-foreground"
     >
       {/* Grain overlay */}
       <div

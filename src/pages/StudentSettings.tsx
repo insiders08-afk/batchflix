@@ -87,7 +87,7 @@ export default function StudentSettings() {
     if (!profileId) return;
     setSaving(true);
     try {
-      const updates: Record<string, string> = {};
+      const updates: { phone?: string; full_name?: string } = {};
       if (editPhone !== phone) updates.phone = editPhone;
       if (editName !== fullName) updates.full_name = editName;
 

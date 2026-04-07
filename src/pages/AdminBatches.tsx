@@ -264,7 +264,7 @@ function BatchFormDialog({
 
     if (editBatch) {
       // Edit existing batch
-      const updates: Record<string, unknown> = { name, course, schedule: scheduleStr };
+      const updates: { name: string; course: string; schedule: string } = { name, course, schedule: scheduleStr };
 
       const { error } = await supabase.from("batches").update(updates).eq("id", editBatch.id);
       if (error) {
