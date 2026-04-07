@@ -417,14 +417,19 @@ export default function BatchWorkspace() {
   // NOTE: chat-files bucket is now PRIVATE. We store the storage path in DB
   // and generate signed URLs on the fly for display.
   const uploadChatFile = async (file: File): Promise<{ url: string; name: string; type: string } | null> => {
-    if (!currentUserId) return null;
+    if (!currentUserId) {
+      console.error("[upload] No currentUserId");
+      return null;
+    }
     const ext = file.name.split(".").pop() || "bin";
+    const mimeType = file.type || (ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "png" ? "image/png" : "application/octet-stream");
     const path = `${currentUserId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage
       .from("chat-files")
-      .upload(path, file, { contentType: file.type, upsert: false });
+      .upload(path, file, { contentType: mimeType, upsert: false });
     if (error) {
-      console.error("[upload]", error);
+      console.error("[upload]", error.message, error);
+      toast({ title: "Upload error", description: error.message, variant: "destructive" });
       return null;
     }
     // Generate a signed URL valid for 7 days so the link works even from private bucket
@@ -433,9 +438,10 @@ export default function BatchWorkspace() {
       .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 days
     if (signErr || !signedData) {
       console.error("[signed-url]", signErr);
+      toast({ title: "Failed to generate file link", description: signErr?.message, variant: "destructive" });
       return null;
     }
-    return { url: signedData.signedUrl, name: file.name, type: file.type };
+    return { url: signedData.signedUrl, name: file.name, type: mimeType };
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
