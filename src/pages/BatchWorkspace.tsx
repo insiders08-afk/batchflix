@@ -132,6 +132,7 @@ export default function BatchWorkspace() {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [reactionsViewerMsg, setReactionsViewerMsg] = useState<ChatMessage | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   // Default true: until we scroll to bottom for the first time, show the button
   const [showScrollDown, setShowScrollDown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
