@@ -147,14 +147,10 @@ export function useDirectMessages({
       toast({ title: "Upload error", description: error.message, variant: "destructive" });
       return null;
     }
-    const { data: signedData, error: signErr } = await supabase.storage
+    const { data: publicData } = supabase.storage
       .from("chat-files")
-      .createSignedUrl(path, 60 * 60 * 24 * 7);
-    if (signErr || !signedData) {
-      toast({ title: "Failed to generate file link", variant: "destructive" });
-      return null;
-    }
-    return { url: signedData.signedUrl, name: file.name, type: mimeType };
+      .getPublicUrl(path);
+    return { url: publicData.publicUrl, name: file.name, type: mimeType };
   };
 
   // ── Send message ───────────────────────────────────────────

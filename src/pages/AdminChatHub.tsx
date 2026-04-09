@@ -4,7 +4,7 @@ import { Loader2, MessageSquare, Users, GraduationCap, LayoutList } from "lucide
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ChatListItem, getInitials, formatRelativeTime } from "@/components/chat/ChatListItem";
+import { ChatListItem } from "@/components/chat/ChatListItem";
 import { ChatSearchBar } from "@/components/chat/ChatSearchBar";
 import { useDMList } from "@/hooks/useDMList";
 import type { DirectConversation, BatchLastMessage } from "@/types/chat";
