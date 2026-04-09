@@ -46,8 +46,8 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { sendPushNotification, getBatchStudentIds } from "@/lib/pushNotifications";
 
 interface BatchInfo {
@@ -130,8 +130,8 @@ export default function BatchWorkspace() {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
-  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [reactionsViewerMsg, setReactionsViewerMsg] = useState<ChatMessage | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   // Default true: until we scroll to bottom for the first time, show the button
   const [showScrollDown, setShowScrollDown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -606,12 +606,13 @@ export default function BatchWorkspace() {
         file_url: null,
         file_name: null,
         file_type: null,
-      } as any)
+      })
       .eq("id", messageId);
 
     if (error) {
       toast({ title: "Error deleting message", variant: "destructive" });
     }
+    setMessageToDelete(null);
   };
 
   const resolveReactorNames = (userIds: string[]) => {
@@ -1000,7 +1001,7 @@ export default function BatchWorkspace() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="w-5 h-5 absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreVertical className="w-3 h-3 text-white/80" />
+                            <MoreVertical className="w-3 h-3 text-current opacity-80" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-32">
@@ -1009,7 +1010,7 @@ export default function BatchWorkspace() {
                                <Edit2 className="w-4 h-4 mr-2" /> Edit
                              </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem className="text-danger focus:text-danger" onClick={() => handleDeleteMessage(msg.id)}>
+                          <DropdownMenuItem className="text-danger focus:text-danger" onClick={() => setMessageToDelete(msg.id)}>
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -1091,6 +1092,27 @@ export default function BatchWorkspace() {
                 </DialogContent>
               </Dialog>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={!!messageToDelete} onOpenChange={(open) => !open && setMessageToDelete(null)}>
+              <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete message?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently hide the message from everyone in the batch. You cannot undo this action.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-danger text-white hover:bg-danger/90"
+                    onClick={() => messageToDelete && handleDeleteMessage(messageToDelete)}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* Replying to preview */}
             {replyingTo && (
