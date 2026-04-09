@@ -802,7 +802,7 @@ export default function BatchWorkspace() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background">
       {/* Header */}
       <header className="border-b border-border/50 bg-card flex items-center gap-3 px-4 h-14 flex-shrink-0">
         <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleBack}>
