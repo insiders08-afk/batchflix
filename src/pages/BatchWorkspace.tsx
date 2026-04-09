@@ -38,10 +38,16 @@ import {
   ThumbsUp,
   ThumbsDown,
   ArrowDown,
+  Edit2,
+  Trash2,
+  MoreVertical,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { sendPushNotification, getBatchStudentIds } from "@/lib/pushNotifications";
 
 interface BatchInfo {
@@ -66,6 +72,8 @@ interface ChatMessage {
   isSelf?: boolean;
   reply_to_id?: string | null;
   reactions?: Record<string, string[]>; // emoji -> user_ids[]
+  is_deleted?: boolean;
+  is_edited?: boolean;
 }
 
 interface Student {
@@ -122,8 +130,11 @@ export default function BatchWorkspace() {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
+  const [reactionsViewerMsg, setReactionsViewerMsg] = useState<ChatMessage | null>(null);
   // Default true: until we scroll to bottom for the first time, show the button
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Attendance
   const [students, setStudents] = useState<Student[]>([]);
@@ -315,7 +326,13 @@ export default function BatchWorkspace() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === updated.id
-                ? { ...m, reactions: (updated.reactions ?? {}) as Record<string, string[]>, message: updated.message }
+                ? { 
+                    ...m, 
+                    reactions: (updated.reactions ?? {}) as Record<string, string[]>, 
+                    message: updated.message,
+                    is_deleted: updated.is_deleted,
+                    is_edited: updated.is_edited
+                  }
                 : m,
             ),
           );
@@ -389,7 +406,21 @@ export default function BatchWorkspace() {
       }
     });
     observer.observe(container);
-    return () => observer.disconnect();
+
+    const handleResize = () => {
+      if (initialScrollDone.current) {
+        const dist = container.scrollHeight - container.scrollTop - container.clientHeight;
+        if (dist < 300) {
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+    };
+    window.visualViewport?.addEventListener("resize", handleResize);
+
+    return () => {
+      observer.disconnect();
+      window.visualViewport?.removeEventListener("resize", handleResize);
+    };
   }, [loading, messages.length]);
 
   // When a NEW message arrives (realtime), auto-scroll only if already near bottom
@@ -459,6 +490,26 @@ export default function BatchWorkspace() {
     if ((!chatInput.trim() && !attachedFile) || !batch) return;
     setSendingMsg(true);
 
+    if (editingMessage) {
+      const { error } = await supabase
+        .from("batch_messages")
+        .update({
+          message: chatInput.trim(),
+          is_edited: true,
+        })
+        .eq("id", editingMessage.id);
+
+      if (!error) {
+        setChatInput("");
+        setEditingMessage(null);
+        setTimeout(() => inputRef.current?.focus(), 50);
+      } else {
+        toast({ title: "Failed to edit message", variant: "destructive" });
+      }
+      setSendingMsg(false);
+      return;
+    }
+
     let fileData: { url: string; name: string; type: string } | null = null;
     if (attachedFile) {
       setUploadingFile(true);
@@ -488,6 +539,8 @@ export default function BatchWorkspace() {
       setChatInput("");
       setAttachedFile(null);
       setReplyingTo(null);
+      setEditingMessage(null);
+      setTimeout(() => inputRef.current?.focus(), 50);
 
       const msgText = chatInput.trim() || `📎 ${fileData?.name || "File shared"}`;
 
@@ -542,6 +595,33 @@ export default function BatchWorkspace() {
     if (error) {
       toast({ title: "Error updating reaction", variant: "destructive" });
     }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    const { error } = await supabase
+      .from("batch_messages")
+      .update({
+        is_deleted: true,
+        message: "This message was deleted",
+        file_url: null,
+        file_name: null,
+        file_type: null,
+      } as any)
+      .eq("id", messageId);
+
+    if (error) {
+      toast({ title: "Error deleting message", variant: "destructive" });
+    }
+  };
+
+  const resolveReactorNames = (userIds: string[]) => {
+    return userIds.map((id) => {
+      if (id === currentUserId) return "You";
+      if (id === batch?.teacher_id) return batch.teacher_name || "Teacher";
+      const student = students.find((s) => s.user_id === id);
+      if (student) return student.full_name;
+      return "Unknown User";
+    });
   };
 
   const saveAttendance = async () => {
@@ -720,7 +800,7 @@ export default function BatchWorkspace() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-[100dvh] bg-background">
       {/* Header */}
       <header className="border-b border-border/50 bg-card flex items-center gap-3 px-4 h-14 flex-shrink-0">
         <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleBack}>
@@ -788,18 +868,19 @@ export default function BatchWorkspace() {
                 </div>
               )}
               {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  drag="x"
-                  dragConstraints={msg.isSelf ? { left: 0, right: 100 } : { left: -100, right: 0 }}
-                  dragElastic={0.4}
-                  onDragEnd={(_, info) => {
-                    if (msg.isSelf && info.offset.x > 60) {
-                      setReplyingTo(msg);
-                    } else if (!msg.isSelf && info.offset.x < -60) {
-                      setReplyingTo(msg);
-                    }
-                  }}
+                  <motion.div
+                    key={msg.id}
+                    drag="x"
+                    dragSnapToOrigin={true}
+                    dragConstraints={msg.isSelf ? { left: 0, right: 100 } : { left: -100, right: 0 }}
+                    dragElastic={0.4}
+                    onDragEnd={(_, info) => {
+                      if (msg.isSelf && info.offset.x > 60) {
+                        setReplyingTo(msg);
+                      } else if (!msg.isSelf && info.offset.x < -60) {
+                        setReplyingTo(msg);
+                      }
+                    }}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={cn("flex gap-2.5 relative group", msg.isSelf ? "flex-row-reverse" : "flex-row")}
@@ -856,17 +937,23 @@ export default function BatchWorkspace() {
                           : "bg-card border border-border/60 rounded-tl-sm",
                       )}
                     >
-                      {/* Reply reference */}
-                      {msg.reply_to_id && (
-                        <div
-                          className={cn(
-                            "mb-2 p-2 rounded-lg border-l-4 bg-black/5 text-xs truncate",
-                            msg.isSelf ? "border-white/40 text-white/90" : "border-primary/40 text-muted-foreground",
-                          )}
-                        >
-                          {messages.find((m) => m.id === msg.reply_to_id)?.message || "Original message"}
+                      {msg.is_deleted ? (
+                        <div className="italic text-muted-foreground flex items-center gap-1.5 opacity-80">
+                          <Trash2 className="w-3.5 h-3.5" /> This message was deleted
                         </div>
-                      )}
+                      ) : (
+                        <>
+                          {/* Reply reference */}
+                          {msg.reply_to_id && (
+                            <div
+                              className={cn(
+                                "mb-2 p-2 rounded-lg border-l-4 bg-black/5 text-xs truncate",
+                                msg.isSelf ? "border-white/40 text-white/90" : "border-primary/40 text-muted-foreground",
+                              )}
+                            >
+                              {messages.find((m) => m.id === msg.reply_to_id)?.message || "Original message"}
+                            </div>
+                          )}
                       {/* File attachment */}
                       {msg.file_url && (
                         <div className="mb-1.5">
@@ -905,11 +992,34 @@ export default function BatchWorkspace() {
                           )}
                         </div>
                       )}
-                      {/* Text */}
-                      {msg.message && msg.message !== msg.file_name && <span>{msg.message}</span>}
+                          )}
+                        </>
+                      )}
                     </div>
+                    {!msg.is_deleted && msg.isSelf && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="w-5 h-5 absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreVertical className="w-3 h-3 text-white/80" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-32">
+                          {new Date(msg.created_at).getTime() > Date.now() - 20 * 60 * 1000 && !msg.file_url && (
+                             <DropdownMenuItem onClick={() => { setEditingMessage(msg); setChatInput(msg.message); setTimeout(() => inputRef.current?.focus(), 50); }}>
+                               <Edit2 className="w-4 h-4 mr-2" /> Edit
+                             </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem className="text-danger focus:text-danger" onClick={() => handleDeleteMessage(msg.id)}>
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     <div className="flex items-center gap-3 mt-1 px-1">
-                      <span className="text-[10px] text-muted-foreground">{formatChatDate(msg.created_at)}</span>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        {formatChatDate(msg.created_at)}
+                        {msg.is_edited && <span className="italic opacity-70">(Edited)</span>}
+                      </span>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleReaction(msg.id, "👍")}
@@ -935,6 +1045,14 @@ export default function BatchWorkspace() {
                             <span className="text-[10px] font-bold">{msg.reactions["👎"].length}</span>
                           )}
                         </button>
+                        {(Object.keys(msg.reactions || {}).reduce((acc, cur) => acc + (msg.reactions?.[cur]?.length || 0), 0) > 0) && (
+                          <button
+                            onClick={() => setReactionsViewerMsg(msg)}
+                            className="text-[10px] font-semibold text-primary hover:underline ml-1"
+                          >
+                            See
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -942,6 +1060,37 @@ export default function BatchWorkspace() {
               ))}
               <div ref={chatEndRef} />
             </div>
+
+            {/* Reactions Viewer Dialog */}
+            {reactionsViewerMsg && (
+              <Dialog open={!!reactionsViewerMsg} onOpenChange={(open) => !open && setReactionsViewerMsg(null)}>
+                <DialogContent className="sm:max-w-xs">
+                  <DialogHeader>
+                    <DialogTitle className="font-display">Reactions</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2 max-h-[60vh] overflow-y-auto">
+                    {["👍", "👎"].map((emoji) => {
+                      const userIds = reactionsViewerMsg.reactions?.[emoji] || [];
+                      if (userIds.length === 0) return null;
+                      const names = resolveReactorNames(userIds);
+                      return (
+                        <div key={emoji} className="space-y-2">
+                          <h4 className="text-sm font-semibold flex items-center gap-2">
+                            <span>{emoji}</span>
+                            <Badge variant="secondary" className="px-1.5 py-0 min-w-5 justify-center">{userIds.length}</Badge>
+                          </h4>
+                          <div className="space-y-1.5 pl-2 border-l-2 border-border/50">
+                            {names.map((name, i) => (
+                              <p key={i} className="text-sm">{name}</p>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
 
             {/* Replying to preview */}
             {replyingTo && (
@@ -1031,20 +1180,42 @@ export default function BatchWorkspace() {
                 <Paperclip className="w-4 h-4" />
               </Button>
               <Input
-                placeholder="Type a message..."
+                ref={inputRef}
+                placeholder={editingMessage ? "Edit your message..." : "Type a message..."}
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
                 className="flex-1 h-9"
               />
-              <Button
-                onClick={sendMessage}
-                size="icon"
-                disabled={sendingMsg || (!chatInput.trim() && !attachedFile)}
-                className="w-9 h-9 gradient-hero text-white border-0 hover:opacity-90 flex-shrink-0"
-              >
-                {sendingMsg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              </Button>
+              {editingMessage ? (
+                <>
+                  <Button
+                    onClick={() => { setEditingMessage(null); setChatInput(""); }}
+                    size="icon"
+                    variant="ghost"
+                    className="w-9 h-9 flex-shrink-0"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    onClick={sendMessage}
+                    size="icon"
+                    disabled={sendingMsg || !chatInput.trim()}
+                    className="w-9 h-9 gradient-hero text-white border-0 hover:opacity-90 flex-shrink-0"
+                  >
+                    {sendingMsg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={sendMessage}
+                  size="icon"
+                  disabled={sendingMsg || (!chatInput.trim() && !attachedFile)}
+                  className="w-9 h-9 gradient-hero text-white border-0 hover:opacity-90 flex-shrink-0"
+                >
+                  {sendingMsg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                </Button>
+              )}
             </div>
           </TabsContent>
 
