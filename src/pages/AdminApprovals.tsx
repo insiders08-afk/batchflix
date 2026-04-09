@@ -226,7 +226,7 @@ export default function AdminApprovals() {
     setEnrollmentLoading(field);
     const { error } = await supabase
       .from("institutes")
-      .update({ [field]: value })
+      .update({ [field]: value } as any)
       .eq("institute_code", instituteCode);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });

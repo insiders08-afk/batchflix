@@ -132,6 +132,7 @@ export default function BatchWorkspace() {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [reactionsViewerMsg, setReactionsViewerMsg] = useState<ChatMessage | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   // Default true: until we scroll to bottom for the first time, show the button
   const [showScrollDown, setShowScrollDown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -990,10 +991,18 @@ export default function BatchWorkspace() {
                               )}
                               <span className="truncate max-w-[140px]">{msg.file_name || "Download file"}</span>
                             </a>
-                          )}
+                      )}
                         </div>
                       )}
+                      {/* Message text */}
+                      {msg.message && msg.message !== msg.file_name && (
+                        <span>
+                          {msg.message}
+                          {msg.is_edited && (
+                            <span className="ml-1.5 text-[10px] opacity-60 italic">(edited)</span>
                           )}
+                        </span>
+                      )}
                         </>
                       )}
                     </div>
