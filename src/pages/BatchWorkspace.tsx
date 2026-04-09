@@ -802,7 +802,7 @@ export default function BatchWorkspace() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background">
       {/* Header */}
       <header className="border-b border-border/50 bg-card flex items-center gap-3 px-4 h-14 flex-shrink-0">
         <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleBack}>
@@ -1201,6 +1201,7 @@ export default function BatchWorkspace() {
                 onChange={handleFileSelect}
               />
               <Button
+                onMouseDown={(e) => e.preventDefault()}
                 variant="ghost"
                 size="icon"
                 className="w-9 h-9 text-muted-foreground hover:text-primary flex-shrink-0"
@@ -1221,6 +1222,7 @@ export default function BatchWorkspace() {
               {editingMessage ? (
                 <>
                   <Button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => { setEditingMessage(null); setChatInput(""); }}
                     size="icon"
                     variant="ghost"
@@ -1229,6 +1231,7 @@ export default function BatchWorkspace() {
                     <X className="w-4 h-4 text-muted-foreground" />
                   </Button>
                   <Button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={sendMessage}
                     size="icon"
                     disabled={sendingMsg || !chatInput.trim()}
@@ -1239,6 +1242,7 @@ export default function BatchWorkspace() {
                 </>
               ) : (
                 <Button
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={sendMessage}
                   size="icon"
                   disabled={sendingMsg || (!chatInput.trim() && !attachedFile)}
