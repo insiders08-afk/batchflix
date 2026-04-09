@@ -152,6 +152,8 @@ export type Database = {
           file_url: string | null
           id: string
           institute_code: string
+          is_deleted: boolean | null
+          is_edited: boolean | null
           message: string
           reactions: Json
           reply_to_id: string | null
@@ -167,6 +169,8 @@ export type Database = {
           file_url?: string | null
           id?: string
           institute_code: string
+          is_deleted?: boolean | null
+          is_edited?: boolean | null
           message: string
           reactions?: Json
           reply_to_id?: string | null
@@ -182,6 +186,8 @@ export type Database = {
           file_url?: string | null
           id?: string
           institute_code?: string
+          is_deleted?: boolean | null
+          is_edited?: boolean | null
           message?: string
           reactions?: Json
           reply_to_id?: string | null
