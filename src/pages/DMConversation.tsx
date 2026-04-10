@@ -115,9 +115,6 @@ export default function DMConversation() {
   const {
     messages,
     loading: msgsLoading,
-    hasMore,
-    loadingMore,
-    loadMore,
     sendMessage,
     editMessage,
     deleteMessage,

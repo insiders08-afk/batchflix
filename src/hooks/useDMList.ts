@@ -49,8 +49,14 @@ export function useDMList({ currentUserId, currentUserRole, instituteCode }: Use
   useEffect(() => {
     if (!currentUserId || !instituteCode) return;
 
+    // Clean up any previous channel first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const filterCol = currentUserRole === "admin" ? "admin_id" : "other_user_id";
-    const channelName = `dm-list-${currentUserId}`;
+    const channelName = `dm-list-${currentUserId}-${Date.now()}`;
 
     const channel = supabase
       .channel(channelName)
@@ -63,7 +69,6 @@ export function useDMList({ currentUserId, currentUserRole, instituteCode }: Use
           filter: `${filterCol}=eq.${currentUserId}`,
         },
         () => {
-          // Refresh the full list on any change
           fetchConversations();
         }
       )
@@ -73,6 +78,7 @@ export function useDMList({ currentUserId, currentUserRole, instituteCode }: Use
 
     return () => {
       supabase.removeChannel(channel);
+      channelRef.current = null;
     };
   }, [currentUserId, currentUserRole, instituteCode, fetchConversations]);
 
