@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Send, Paperclip, X, FileText, Image as ImageIcon,
   Download, Trash2, Edit2, MoreVertical, ThumbsUp, ThumbsDown,
-  ArrowDown, Loader2, Check, ChevronsUp,
+  ArrowDown, Loader2, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
