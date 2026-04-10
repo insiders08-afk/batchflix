@@ -1016,7 +1016,7 @@ export default function BatchWorkspace() {
                           </h4>
                           <div className="space-y-1.5 pl-2 border-l-2 border-border/50">
                             {names.map((name, i) => (
-                              <p key={i} className="text-sm">{name}</p>
+                              <p key={userIds[i] || i} className="text-sm">{name}</p>
                             ))}
                           </div>
                         </div>
