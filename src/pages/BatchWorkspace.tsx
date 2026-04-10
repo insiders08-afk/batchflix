@@ -707,31 +707,7 @@ export default function BatchWorkspace() {
 
   const presentCount = Object.values(attendance).filter(Boolean).length;
 
-  const formatChatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const isYesterday = date.toDateString() === yesterday.toDateString();
-
-    const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-    if (isToday) return timeStr;
-    if (isYesterday) return `${timeStr} Yesterday`;
-
-    const day = date.getDate();
-    const month = date.toLocaleString("en-IN", { month: "short" }).toUpperCase();
-    return `${timeStr} ${day} ${month}`;
-  };
-
-  const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const hours = Math.floor(diff / 3600000);
-    if (hours < 1) return "Just now";
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  };
+  // B-29: formatChatDate and timeAgo are now imported from chatUtils
 
   const isImage = (type: string | null | undefined) => type?.startsWith("image/");
   const isPDF = (type: string | null | undefined) => type === "application/pdf";
@@ -828,8 +804,8 @@ export default function BatchWorkspace() {
                     key={msg.id}
                     drag="x"
                     dragSnapToOrigin={true}
-                    dragConstraints={msg.isSelf ? { left: 0, right: 100 } : { left: -100, right: 0 }}
-                    dragElastic={0.4}
+                    dragConstraints={msg.isSelf ? { left: 0, right: 70 } : { left: -70, right: 0 }}
+                    dragElastic={0.15}
                     onDragEnd={(_, info) => {
                       if (msg.isSelf && info.offset.x > 60) {
                         setReplyingTo(msg);
@@ -907,7 +883,7 @@ export default function BatchWorkspace() {
                                 msg.isSelf ? "border-white/40 text-white/90" : "border-primary/40 text-muted-foreground",
                               )}
                             >
-                              {messages.find((m) => m.id === msg.reply_to_id)?.message || "Original message"}
+                              {getMessagePreview(messages.find((m) => m.id === msg.reply_to_id) || {})}
                             </div>
                           )}
                       {/* File attachment */}
@@ -948,14 +924,9 @@ export default function BatchWorkspace() {
                       )}
                         </div>
                       )}
-                      {/* Message text */}
+                      {/* B-16: Removed duplicate (edited) indicator — only shown in timestamp row */}
                       {msg.message && msg.message !== msg.file_name && (
-                        <span>
-                          {msg.message}
-                          {msg.is_edited && (
-                            <span className="ml-1.5 text-[10px] opacity-60 italic">(edited)</span>
-                          )}
-                        </span>
+                        <span>{msg.message}</span>
                       )}
                         </>
                       )}
