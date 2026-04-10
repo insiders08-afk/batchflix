@@ -23,6 +23,7 @@ function ReadOnlyField({ label, value, icon }: { label: string; value: string; i
 }
 
 export default function TeacherSettings() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

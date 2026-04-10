@@ -23,6 +23,7 @@ function ReadOnlyField({ label, value, icon, mono = false }: { label: string; va
 }
 
 export default function StudentSettings() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
