@@ -26,7 +26,7 @@ import {
   GraduationCap,
   ChevronRight,
   ChevronDown,
-  Play,
+  
   XCircle,
   CheckCircle2,
   Clock,
