@@ -17,13 +17,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useDirectMessages } from "@/hooks/useDirectMessages";
 import type { DirectMessage } from "@/types/chat";
+import { useToast } from "@/hooks/use-toast";
+import { formatChatDate, getMessagePreview, roleLabel } from "@/lib/chatUtils";
 
 const MAX_FILE_SIZE_MB = 10;
 
-// Fix #22: Role-based avatar colors instead of always gradient-hero
+// Role-based avatar colors
 const ROLE_AVATAR: Record<string, string> = {
   admin:   "bg-indigo-500",
   teacher: "bg-blue-500",
@@ -36,6 +37,7 @@ function roleAvatar(role: string) {
 export default function DMConversation() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [currentUserId, setCurrentUserId] = useState("");
   const [currentUserName, setCurrentUserName] = useState("");
@@ -53,7 +55,6 @@ export default function DMConversation() {
   const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<DirectMessage | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
-  const [reactionsViewerMsg, setReactionsViewerMsg] = useState<DirectMessage | null>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -66,8 +67,6 @@ export default function DMConversation() {
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-
-      // Fix #12: Auth guard — redirect to login if not authenticated
       if (!user || !conversationId) {
         navigate("/role-select", { replace: true });
         return;
@@ -85,7 +84,6 @@ export default function DMConversation() {
         setInstituteCode(profile.institute_code || "");
       }
 
-      // Fetch conversation to find the other participant
       const { data: conv } = await supabase
         .from("direct_conversations")
         .select("admin_id, other_user_id")
@@ -94,7 +92,7 @@ export default function DMConversation() {
 
       if (conv) {
         const otherId = conv.admin_id === user.id ? conv.other_user_id : conv.admin_id;
-        const isOtherAdmin = conv.admin_id !== user.id;
+        // B-20: Always use otherProfile.role from DB, not hardcoded
         const { data: otherProfile } = await supabase
           .from("profiles")
           .select("full_name, role")
@@ -102,7 +100,7 @@ export default function DMConversation() {
           .single();
         if (otherProfile) {
           setOtherUserName(otherProfile.full_name);
-          setOtherUserRole(isOtherAdmin ? "admin" : otherProfile.role);
+          setOtherUserRole(otherProfile.role);
         }
       }
 
@@ -112,6 +110,7 @@ export default function DMConversation() {
   }, [conversationId, navigate]);
 
   // ── Messages hook ───────────────────────────────────────────
+  // B-1: Removed hasMore/loadMore/loadingMore destructuring (not returned by hook)
   const {
     messages,
     loading: msgsLoading,
@@ -119,6 +118,8 @@ export default function DMConversation() {
     editMessage,
     deleteMessage,
     reactToMessage,
+    markAsRead,
+    channelStatus,
   } = useDirectMessages({
     conversationId: conversationId ?? "",
     currentUserId,
@@ -127,8 +128,14 @@ export default function DMConversation() {
     instituteCode,
   });
 
+  // B-7: Call markAsRead when messages load
+  useEffect(() => {
+    if (!msgsLoading && messages.length > 0) {
+      markAsRead();
+    }
+  }, [msgsLoading, messages.length, markAsRead]);
+
   // ── Scroll management ──────────────────────────────────────
-  // Fix #18: Use scrollIntoView which properly respects browser reflow
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     chatEndRef.current?.scrollIntoView({ behavior, block: "end" });
     setShowScrollDown(false);
@@ -163,7 +170,37 @@ export default function DMConversation() {
     prevMsgCount.current = newCount;
   }, [messages, scrollToBottom]);
 
-  // Fix #11: Always navigate to chat hub — never rely on unreliable history.length
+  // ResizeObserver + visualViewport for mobile keyboard (ported from BatchWorkspace)
+  useEffect(() => {
+    if (msgsLoading) return;
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      const dist = container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (dist < 300) {
+        container.scrollTop = container.scrollHeight;
+        setShowScrollDown(false);
+      }
+    });
+    observer.observe(container);
+
+    const handleResize = () => {
+      if (initialScrollDone.current) {
+        const dist = container.scrollHeight - container.scrollTop - container.clientHeight;
+        if (dist < 300) {
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+    };
+    window.visualViewport?.addEventListener("resize", handleResize);
+
+    return () => {
+      observer.disconnect();
+      window.visualViewport?.removeEventListener("resize", handleResize);
+    };
+  }, [msgsLoading]);
+
   const handleBack = () => {
     navigate(`/${currentUserRole}/chat`);
   };
@@ -176,7 +213,8 @@ export default function DMConversation() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      alert(`File too large (max ${MAX_FILE_SIZE_MB} MB)`);
+      // B-4: Use toast instead of alert()
+      toast({ title: `File too large (max ${MAX_FILE_SIZE_MB} MB)`, variant: "destructive" });
       return;
     }
     setAttachedFile(file);
@@ -193,7 +231,6 @@ export default function DMConversation() {
       setChatInput("");
       setEditingMessage(null);
       setSendingMsg(false);
-      // Fix #1: No focus() — keeping focus throughout. Input never lost focus.
       return;
     }
 
@@ -210,8 +247,6 @@ export default function DMConversation() {
     setReplyingTo(null);
     setEditingMessage(null);
     setSendingMsg(false);
-    // Fix #1: No setTimeout focus hack — the input never lost focus since
-    // both send button and file button use onMouseDown={e => e.preventDefault()}
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -221,27 +256,7 @@ export default function DMConversation() {
     }
   };
 
-  const formatChatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const isYesterday = date.toDateString() === yesterday.toDateString();
-    const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    if (isToday) return timeStr;
-    if (isYesterday) return `${timeStr} Yesterday`;
-    return `${timeStr} ${date.getDate()} ${date.toLocaleString("en-IN", { month: "short" }).toUpperCase()}`;
-  };
-
-  const roleLabel = (role: string) => {
-    if (role === "admin") return "Admin";
-    if (role === "teacher") return "Teacher";
-    if (role === "student") return "Student";
-    return role;
-  };
-
-  // Fix #14: Resolve reactor names from known participants (1-on-1 DM)
+  // B-14: Resolve reactor names from known participants (1-on-1 DM)
   const resolveReactorName = (userId: string) => {
     if (userId === currentUserId) return "You";
     return otherUserName || "User";
@@ -263,7 +278,6 @@ export default function DMConversation() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
 
-        {/* Fix #22: Role-based avatar color */}
         <div
           className={cn(
             "w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0",
@@ -278,9 +292,15 @@ export default function DMConversation() {
           <p className="text-xs text-muted-foreground mt-0.5">{roleLabel(otherUserRole)}</p>
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-success">
-          <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-          Live
+        {/* B-14: Real-time "Live" indicator based on channel status */}
+        <div className="flex items-center gap-1 text-xs">
+          <span className={cn(
+            "w-1.5 h-1.5 rounded-full",
+            channelStatus === "SUBSCRIBED" ? "bg-success animate-pulse" : "bg-yellow-500"
+          )} />
+          <span className={channelStatus === "SUBSCRIBED" ? "text-success" : "text-yellow-500"}>
+            {channelStatus === "SUBSCRIBED" ? "Live" : "Connecting"}
+          </span>
         </div>
       </header>
 
@@ -288,14 +308,12 @@ export default function DMConversation() {
       <div
         ref={chatContainerRef}
         className="flex-1 overflow-y-auto p-4 space-y-3"
-        style={{ touchAction: "pan-y" }} // Fix #7: let browser handle vertical scroll natively
+        style={{ touchAction: "pan-y" }}
         onScroll={(e) => {
           const t = e.currentTarget;
           setShowScrollDown(t.scrollHeight - t.scrollTop - t.clientHeight > 100);
         }}
       >
-        {/* Load older messages - placeholder for future pagination */}
-
         {messages.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
@@ -310,7 +328,7 @@ export default function DMConversation() {
             key={msg.id}
             drag="x"
             dragSnapToOrigin
-            // Fix #7: tighter constraints + higher snap threshold to reduce accidental triggers
+            // B-25: Aligned drag constraints with tighter values
             dragConstraints={msg.isSelf ? { left: 0, right: 70 } : { left: -70, right: 0 }}
             dragElastic={0.15}
             dragMomentum={false}
@@ -327,7 +345,7 @@ export default function DMConversation() {
               <div
                 className={cn(
                   "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5",
-                  roleAvatar(msg.sender_role) // Fix #22: role-based color
+                  roleAvatar(msg.sender_role)
                 )}
               >
                 {msg.sender_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
@@ -360,7 +378,7 @@ export default function DMConversation() {
                   </div>
                 ) : (
                   <>
-                    {/* Reply reference */}
+                    {/* B-13: Smart reply reference */}
                     {msg.reply_to_id && (
                       <div
                         className={cn(
@@ -368,7 +386,7 @@ export default function DMConversation() {
                           msg.isSelf ? "border-white/40 text-white/90" : "border-primary/40 text-muted-foreground"
                         )}
                       >
-                        {messages.find((m) => m.id === msg.reply_to_id)?.message || "Original message"}
+                        {getMessagePreview(messages.find((m) => m.id === msg.reply_to_id) || {})}
                       </div>
                     )}
 
@@ -410,9 +428,13 @@ export default function DMConversation() {
                       </div>
                     )}
 
-                    {/* Message text */}
-                    {msg.message && msg.message !== msg.file_name && (
+                    {/* Message text — hide if it's just the file emoji prefix */}
+                    {msg.message && msg.message !== msg.file_name && !msg.message.startsWith("📎 ") && (
                       <span>{msg.message}</span>
+                    )}
+                    {/* Show file-only messages that have text beyond the prefix */}
+                    {msg.message && !msg.file_url && (
+                      msg.message.startsWith("📎 ") ? null : null
                     )}
                   </>
                 )}
@@ -456,17 +478,17 @@ export default function DMConversation() {
               <div className="flex items-center gap-3 mt-1 px-1">
                 <span className="text-[10px] text-muted-foreground">
                   {formatChatDate(msg.created_at)}
-                  {/* Fix #8: Only ONE "edited" indicator — removed duplicate from inside bubble */}
                   {!msg.is_deleted && msg.is_edited && (
                     <span className="italic opacity-70 ml-1">(Edited)</span>
                   )}
                 </span>
 
-                {/* Fix #24: Checkmark for own sent messages */}
+                {/* Checkmark for own sent messages */}
                 {msg.isSelf && !msg.is_deleted && (
                   <Check className="w-3 h-3 text-white/60 flex-shrink-0" />
                 )}
 
+                {/* B-5 (DM): Simplified reaction UI — no "See" button, no count badge in 1-on-1 */}
                 <div className="flex items-center gap-2">
                   {(["👍", "👎"] as const).map((emoji) => (
                     <button
@@ -475,23 +497,14 @@ export default function DMConversation() {
                       className={cn(
                         "flex items-center gap-1 p-1 rounded-md transition-colors hover:bg-muted",
                         msg.reactions?.[emoji]?.includes(currentUserId) && emoji === "👍" && "text-primary bg-primary/10",
-                        msg.reactions?.[emoji]?.includes(currentUserId) && emoji === "👎" && "text-destructive bg-destructive/10"
+                        msg.reactions?.[emoji]?.includes(currentUserId) && emoji === "👎" && "text-destructive bg-destructive/10",
+                        // Show filled state if other user reacted too
+                        msg.reactions?.[emoji]?.length > 0 && !msg.reactions?.[emoji]?.includes(currentUserId) && "opacity-60"
                       )}
                     >
                       {emoji === "👍" ? <ThumbsUp className="w-3 h-3" /> : <ThumbsDown className="w-3 h-3" />}
-                      {(msg.reactions?.[emoji]?.length ?? 0) > 0 && (
-                        <span className="text-[10px] font-bold">{msg.reactions![emoji].length}</span>
-                      )}
                     </button>
                   ))}
-                  {Object.values(msg.reactions || {}).reduce((a, v) => a + v.length, 0) > 0 && (
-                    <button
-                      onClick={() => setReactionsViewerMsg(msg)}
-                      className="text-[10px] font-semibold text-primary hover:underline ml-1"
-                    >
-                      See
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -528,7 +541,7 @@ export default function DMConversation() {
             <p className="text-[10px] font-bold text-primary uppercase tracking-wider">
               Replying to {replyingTo.sender_name}
             </p>
-            <p className="text-sm text-muted-foreground truncate">{replyingTo.message}</p>
+            <p className="text-sm text-muted-foreground truncate">{getMessagePreview(replyingTo)}</p>
           </div>
           <Button
             variant="ghost"
@@ -541,7 +554,7 @@ export default function DMConversation() {
         </div>
       )}
 
-      {/* ── Editing context bar ── */}
+      {/* ── B-28: Editing context bar ── */}
       {editingMessage && (
         <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/20 flex items-center justify-between">
           <div className="flex-1 min-w-0 border-l-2 border-amber-500 pl-3 py-1">
@@ -593,12 +606,11 @@ export default function DMConversation() {
           accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
           onChange={handleFileSelect}
         />
-        {/* Fix #1: onMouseDown preventDefault prevents input from losing focus / keyboard closing */}
         <Button
           variant="ghost"
           size="icon"
           className="w-9 h-9 flex-shrink-0 text-muted-foreground hover:text-primary"
-          onMouseDown={(e) => e.preventDefault()} // Fix #1
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadingFile}
         >
@@ -615,11 +627,10 @@ export default function DMConversation() {
           className="flex-1 text-sm bg-muted/40 border border-border/40 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all resize-none"
         />
 
-        {/* Fix #1: onMouseDown preventDefault keeps keyboard open on iOS */}
         <Button
           size="icon"
           className="w-9 h-9 flex-shrink-0 gradient-hero border-0 text-white shadow-md"
-          onMouseDown={(e) => e.preventDefault()} // Fix #1: prevent input blur on tap
+          onMouseDown={(e) => e.preventDefault()}
           onClick={handleSend}
           disabled={sendingMsg || (!chatInput.trim() && !attachedFile)}
         >
@@ -632,44 +643,6 @@ export default function DMConversation() {
           )}
         </Button>
       </div>
-
-      {/* ── Reactions viewer ── */}
-      {reactionsViewerMsg && (
-        <Dialog
-          open={!!reactionsViewerMsg}
-          onOpenChange={(open) => !open && setReactionsViewerMsg(null)}
-        >
-          <DialogContent className="sm:max-w-xs">
-            <DialogHeader>
-              <DialogTitle className="font-display">Reactions</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2 max-h-[60vh] overflow-y-auto">
-              {["👍", "👎"].map((emoji) => {
-                const userIds = reactionsViewerMsg.reactions?.[emoji] || [];
-                if (userIds.length === 0) return null;
-                return (
-                  <div key={emoji} className="space-y-2">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                      <span>{emoji}</span>
-                      <Badge variant="secondary" className="px-1.5 py-0 min-w-5 justify-center">
-                        {userIds.length}
-                      </Badge>
-                    </h4>
-                    <div className="space-y-1.5 pl-2 border-l-2 border-border/50">
-                      {userIds.map((id) => (
-                        <p key={id} className="text-sm">
-                          {/* Fix #14: Show actual names, not just "User" */}
-                          {resolveReactorName(id)}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* ── Delete confirmation ── */}
       <AlertDialog
