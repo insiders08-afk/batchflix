@@ -26,7 +26,7 @@ import {
   GraduationCap,
   ChevronRight,
   ChevronDown,
-  Play,
+  
   XCircle,
   CheckCircle2,
   Clock,
@@ -550,22 +550,6 @@ export default function Index() {
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </button>
             </Link>
-            <Link to="/demo/admin">
-              <button
-                className="px-8 py-4 rounded-full text-base font-semibold flex items-center gap-2 transition-all duration-300 hover:-translate-y-1"
-                style={{ border: "2px solid #8B6F4E", color: "#3D2B1F", background: "transparent" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "#8B6F4E";
-                  (e.currentTarget as HTMLButtonElement).style.color = "white";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.color = "#3D2B1F";
-                }}
-              >
-                <Play className="w-5 h-5" /> Try Demo
-              </button>
-            </Link>
           </motion.div>
           <motion.p
             initial={{ opacity: 0 }}
@@ -883,22 +867,6 @@ export default function Index() {
                 style={{ background: "#0EA5E9", boxShadow: "0 4px 20px -4px rgba(14,165,233,0.5)" }}
               >
                 Get Started Free <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
-            </Link>
-            <Link to="/demo/admin">
-              <button
-                className="px-8 py-4 rounded-full text-base font-semibold flex items-center gap-2 transition-all duration-300 hover:-translate-y-1"
-                style={{ border: "2px solid #8B6F4E", color: "#3D2B1F" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "#8B6F4E";
-                  (e.currentTarget as HTMLButtonElement).style.color = "white";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.color = "#3D2B1F";
-                }}
-              >
-                <Play className="w-4 h-4" /> Watch Demo
               </button>
             </Link>
           </div>
@@ -1252,23 +1220,14 @@ export default function Index() {
                   <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </button>
               </Link>
-              <Link to="/demo/admin">
-                <button
-                  className="px-10 py-5 rounded-full text-lg font-semibold flex items-center gap-2 transition-all duration-300 hover:-translate-y-1"
-                  style={{ border: "2px solid #8B6F4E", color: "#3D2B1F" }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "#8B6F4E";
-                    (e.currentTarget as HTMLButtonElement).style.color = "white";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                    (e.currentTarget as HTMLButtonElement).style.color = "#3D2B1F";
-                  }}
-                >
-                  Schedule Demo
-                </button>
-              </Link>
             </div>
+
+            <p className="mt-8 text-sm" style={{ color: "#8B6F4E" }}>
+              Want a personal demo? Call our team at{" "}
+              <a href="tel:7505915754" className="font-semibold underline" style={{ color: "#3D2B1F" }}>
+                7505915754
+              </a>
+            </p>
 
             <div
               className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm"
@@ -1355,17 +1314,6 @@ export default function Index() {
                   >
                     Pricing
                   </a>
-                </li>
-                <li>
-                  <Link
-                    to="/demo/admin"
-                    className="transition-colors"
-                    style={{ color: "#D4C4B0" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#0EA5E9")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "#D4C4B0")}
-                  >
-                    Demo
-                  </Link>
                 </li>
                 <li>
                   <a
