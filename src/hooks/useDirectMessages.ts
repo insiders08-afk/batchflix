@@ -24,6 +24,8 @@ export function useDirectMessages({
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // B-14: Track realtime channel status
+  const [channelStatus, setChannelStatus] = useState<string>("CLOSED");
 
   // ── Fetch messages ─────────────────────────────────────────
   const fetchMessages = useCallback(async () => {
@@ -46,11 +48,7 @@ export function useDirectMessages({
     setLoading(false);
   }, [conversationId, currentUserId]);
 
-  useEffect(() => {
-    fetchMessages();
-  }, [fetchMessages]);
-
-  // ── Real-time subscription ─────────────────────────────────
+  // B-5: Combined fetch + subscribe in a single effect to prevent double-fetch
   useEffect(() => {
     if (!conversationId) return;
 
@@ -59,6 +57,9 @@ export function useDirectMessages({
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
+
+    // Fetch messages first
+    fetchMessages();
 
     const channel = supabase
       .channel(`dm-${conversationId}-${Date.now()}`)
@@ -113,13 +114,17 @@ export function useDirectMessages({
           );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        // B-14: Track channel status for "Live" indicator
+        setChannelStatus(status);
+      });
 
     channelRef.current = channel;
     return () => {
       supabase.removeChannel(channel);
+      channelRef.current = null;
     };
-  }, [conversationId, currentUserId]);
+  }, [conversationId, currentUserId, fetchMessages]);
 
   // ── Mark conversation as read ──────────────────────────────
   const markAsRead = useCallback(async () => {
@@ -128,6 +133,7 @@ export function useDirectMessages({
   }, [conversationId]);
 
   // ── File upload ────────────────────────────────────────────
+  // B-3: Use getPublicUrl since chat-files bucket IS public (per storage config)
   const uploadFile = async (
     file: File
   ): Promise<{ url: string; name: string; type: string } | null> => {
@@ -178,13 +184,38 @@ export function useDirectMessages({
         if (!fileData) return;
       }
 
+      // B-6: Use descriptive message for file-only messages instead of empty string
+      const messageText = text.trim() || (fileData ? `📎 ${fileData.name}` : "");
+
+      // Optimistic send: add message locally before DB insert
+      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticMsg: DirectMessage = {
+        id: optimisticId,
+        conversation_id: conversationId,
+        institute_code: instituteCode,
+        sender_id: currentUserId,
+        sender_name: currentUserName,
+        sender_role: currentUserRole,
+        message: messageText,
+        file_url: fileData?.url ?? null,
+        file_name: fileData?.name ?? null,
+        file_type: fileData?.type ?? null,
+        reply_to_id: replyToId ?? null,
+        reactions: {},
+        is_deleted: false,
+        is_edited: false,
+        created_at: new Date().toISOString(),
+        isSelf: true,
+      };
+      setMessages((prev) => [...prev, optimisticMsg]);
+
       const { error } = await supabase.from("direct_messages").insert({
         conversation_id: conversationId,
         institute_code: instituteCode,
         sender_id: currentUserId,
         sender_name: currentUserName,
         sender_role: currentUserRole,
-        message: text.trim() || (fileData ? "" : ""),
+        message: messageText,
         file_url: fileData?.url ?? null,
         file_name: fileData?.name ?? null,
         file_type: fileData?.type ?? null,
@@ -192,8 +223,11 @@ export function useDirectMessages({
       });
 
       if (error) {
+        // Remove optimistic message on failure
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
         toast({ title: "Failed to send message", description: error.message, variant: "destructive" });
       }
+      // Real message will arrive via realtime INSERT and dedup will handle it
     },
     [conversationId, currentUserId, currentUserName, currentUserRole, instituteCode, toast]
   );
@@ -260,7 +294,7 @@ export function useDirectMessages({
 
       if (error) {
         toast({ title: "Error updating reaction", variant: "destructive" });
-        // Revert
+        // Revert on failure
         setMessages((prev) =>
           prev.map((m) => (m.id === messageId ? { ...m, reactions: current } : m))
         );
@@ -277,5 +311,6 @@ export function useDirectMessages({
     deleteMessage,
     reactToMessage,
     markAsRead,
+    channelStatus,
   };
 }
