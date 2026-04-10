@@ -1055,7 +1055,7 @@ export default function BatchWorkspace() {
                   <p className="text-[10px] font-bold text-primary uppercase tracking-wider">
                     Replying to {replyingTo.sender_name}
                   </p>
-                  <p className="text-sm text-muted-foreground truncate">{replyingTo.message}</p>
+                  <p className="text-sm text-muted-foreground truncate">{getMessagePreview(replyingTo)}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -1068,7 +1068,24 @@ export default function BatchWorkspace() {
               </div>
             )}
 
-            {/* Attached file preview */}
+            {/* B-28: Editing context bar */}
+            {editingMessage && (
+              <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/20 flex items-center justify-between">
+                <div className="flex-1 min-w-0 border-l-2 border-amber-500 pl-3 py-1">
+                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Editing message</p>
+                  <p className="text-sm text-muted-foreground truncate">{editingMessage.message}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 rounded-full"
+                  onClick={() => { setEditingMessage(null); setChatInput(""); }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
             {attachedFile && (
               <div className="px-3 py-2 bg-muted/50 border-t border-border/40 flex items-center gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0 bg-card border border-border/50 rounded-lg px-3 py-1.5">
