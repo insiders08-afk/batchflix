@@ -145,9 +145,14 @@ export default function DMConversation() {
   useEffect(() => {
     if (msgsLoading || messages.length === 0) return;
     if (!initialScrollDone.current) {
-      chatEndRef.current?.scrollIntoView({ behavior: "instant", block: "end" });
-      initialScrollDone.current = true;
-      setShowScrollDown(false);
+      // Wait for DOM to paint all messages before scrolling
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          chatEndRef.current?.scrollIntoView({ behavior: "instant", block: "end" });
+          initialScrollDone.current = true;
+          setShowScrollDown(false);
+        });
+      });
     }
   }, [msgsLoading, messages.length]);
 
