@@ -135,24 +135,28 @@ export default function DMConversation() {
     }
   }, [msgsLoading, messages.length, markAsRead]);
 
-  // ── Scroll management ──────────────────────────────────────
+  // ── Scroll management (aligned with BatchWorkspace) ──────────────────
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    chatEndRef.current?.scrollIntoView({ behavior, block: "end" });
-    setShowScrollDown(false);
+    const container = chatContainerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+    const distFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    setShowScrollDown(distFromBottom > 100);
   }, []);
 
-  // Initial scroll to bottom after first load
+  // Initial scroll to bottom after first load — instant snap
   useEffect(() => {
-    if (msgsLoading || messages.length === 0) return;
+    if (msgsLoading) return;
+    if (messages.length === 0) return;
+
+    const container = chatContainerRef.current;
+    if (!container) return;
+
     if (!initialScrollDone.current) {
-      // Wait for DOM to paint all messages before scrolling
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          chatEndRef.current?.scrollIntoView({ behavior: "instant", block: "end" });
-          initialScrollDone.current = true;
-          setShowScrollDown(false);
-        });
-      });
+      container.scrollTop = container.scrollHeight;
+      initialScrollDone.current = true;
+      const distFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      setShowScrollDown(distFromBottom > 100);
     }
   }, [msgsLoading, messages.length]);
 
